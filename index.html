@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muévete Ipiales — Rutas urbanas</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Tipografías -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:      '#122A3D',
+          paper:    '#EEF2F0',
+          panel:    '#FFFFFF',
+          line:     '#D7DFDB',
+          muted:    '#5C7079',
+          gold:     '#D9A441',
+          teal:     '#1F7A6C',
+          terra:    '#C1502E',
+          indigo2:  '#3B6EA8',
+          olive:    '#7A8A4B',
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          body: ['Inter', 'sans-serif'],
+        },
+      }
+    }
+  }
+</script>
+
+<style>
+  html, body { height: 100%; }
+  body { font-family: 'Inter', sans-serif; background: #EEF2F0; color: #122A3D; }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  #map { background: #DCE6E2; }
+  .leaflet-container { font-family: 'Inter', sans-serif; }
+  .leaflet-popup-content-wrapper { border-radius: 10px; box-shadow: 0 6px 20px rgba(18,42,61,.18); }
+  .leaflet-popup-content { margin: 10px 12px; font-size: 13px; }
+  .leaflet-control-zoom { border: none !important; box-shadow: 0 4px 14px rgba(18,42,61,.15) !important; }
+  .leaflet-control-zoom a { color: #122A3D !important; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #C4D1CB; border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .route-card { transition: border-color .15s ease, background-color .15s ease, transform .1s ease; }
+  .route-card:active { transform: scale(.99); }
+
+  .stop-row:last-child .stop-line { display: none; }
+
+  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .pulse { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse { animation: none; }
+  }
+</style>
+</head>
+
+<body class="h-full">
+
+<div class="flex flex-col h-full">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="border-b border-line bg-paper/95 backdrop-blur z-[1100]">
+    <div class="flex items-center gap-3 px-4 sm:px-6 py-3">
+      <div class="w-9 h-9 rounded-lg bg-ink flex items-center justify-center shrink-0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="#D9A441" stroke-width="1.8" stroke-linecap="round"/>
+          <rect x="4" y="9" width="16" height="7" rx="1.5" stroke="#EEF2F0" stroke-width="1.6"/>
+          <circle cx="8" cy="18.5" r="1.4" fill="#EEF2F0"/>
+          <circle cx="16" cy="18.5" r="1.4" fill="#EEF2F0"/>
+          <path d="M4 12h16" stroke="#EEF2F0" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="leading-tight min-w-0">
+        <h1 class="font-display font-semibold text-lg sm:text-xl text-ink truncate">Muévete Ipiales</h1>
+        <p class="text-[12px] text-muted hidden sm:block">Rutas urbanas, paraderos y horarios en un solo mapa</p>
+      </div>
+
+      <div class="ml-auto flex items-center gap-3 sm:gap-4 shrink-0">
+        <div class="hidden sm:flex items-center gap-1.5 text-[12px] text-teal font-medium">
+          <span class="w-2 h-2 rounded-full bg-teal pulse"></span>
+          Servicio activo
+        </div>
+        <div id="clock" class="tnum text-sm font-medium text-ink"></div>
+      </div>
+    </div>
+
+    <div class="px-4 sm:px-6 pb-3">
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="7" stroke="#5C7079" stroke-width="2"/>
+          <path d="M20 20l-3.5-3.5" stroke="#5C7079" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="text" placeholder="Buscar ruta, barrio o destino…"
+          class="w-full sm:max-w-sm bg-panel border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[380px_1fr]">
+
+    <!-- MAPA -->
+    <div class="relative order-1 lg:order-2 h-[42vh] lg:h-full shrink-0">
+      <div id="map" class="w-full h-full"></div>
+
+      <button id="resetViewBtn" title="Ver todas las rutas"
+        class="absolute top-3 right-3 z-[1000] bg-panel border border-line shadow-md rounded-lg px-3 py-2 text-xs font-medium text-ink flex items-center gap-1.5 hover:border-gold">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4" stroke="#122A3D" stroke-width="2" stroke-linecap="round"/></svg>
+        Ver todo
+      </button>
+
+      <div class="absolute bottom-3 left-3 z-[1000] bg-panel/95 border border-line shadow-md rounded-lg px-3 py-2 text-[11px] text-muted max-w-[200px]">
+        Trazados de referencia con fines ilustrativos, no exactos calle a calle.
+      </div>
+    </div>
+
+    <!-- PANEL LATERAL -->
+    <aside class="order-2 lg:order-1 flex-1 lg:h-full min-h-0 overflow-y-auto bg-paper border-r border-line">
+      <div class="p-4 sm:p-5">
+        <h2 class="font-display font-semibold text-ink text-base">Rutas urbanas</h2>
+        <p class="text-[13px] text-muted mt-0.5 mb-4">Elige una ruta para ver su trazado, paraderos y horario.</p>
+
+        <div id="routeList" class="space-y-2.5"></div>
+
+        <div id="emptyState" class="mt-6 text-center py-8 border border-dashed border-line rounded-xl">
+          <svg class="mx-auto mb-2" width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="#5C7079" stroke-width="1.6" stroke-linecap="round"/><rect x="4" y="9" width="16" height="7" rx="1.5" stroke="#5C7079" stroke-width="1.4"/><circle cx="8" cy="18.5" r="1.2" fill="#5C7079"/><circle cx="16" cy="18.5" r="1.2" fill="#5C7079"/></svg>
+          <p class="text-[13px] text-muted px-6">Selecciona una ruta de la lista para ver sus detalles de operación.</p>
+        </div>
+
+        <div id="routeDetail" class="hidden mt-6"></div>
+      </div>
+    </aside>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   DATOS DE RUTAS — coordenadas aproximadas de Ipiales, Nariño.
+   Trazados simulados con fines demostrativos.
+   ============================================================ */
+const CENTER = [0.8299, -77.6428];
+
+const routes = [
+  {
+    id: 'r1',
+    short: 'R1',
+    name: 'Centro — Terminal',
+    from: 'Parque La Independencia',
+    to: 'Terminal de Transportes',
+    color: '#D9A441',
+    frequency: '8 – 10 min',
+    hours: '5:30 a. m. – 9:30 p. m.',
+    fare: '$2.600 COP',
+    duration: '≈ 18 min',
+    description: 'Conecta el centro histórico con la Terminal de Transportes, pasando por la zona comercial y el Coliseo Municipal.',
+    stops: [
+      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428, main: true },
+      { name: 'Carrera 6 con Calle 14', lat: 0.8318, lng: -77.6410 },
+      { name: 'Coliseo Municipal', lat: 0.8330, lng: -77.6390 },
+      { name: 'Av. Panamericana / Barrio San Pedro', lat: 0.8350, lng: -77.6375 },
+      { name: 'Terminal de Transportes', lat: 0.8371, lng: -77.6362, main: true },
+    ],
+  },
+  {
+    id: 'r2',
+    short: 'R2',
+    name: 'Centro — Rumichaca',
+    from: 'Parque La Independencia',
+    to: 'Puente Internacional de Rumichaca',
+    color: '#C1502E',
+    frequency: '12 – 15 min',
+    hours: '5:00 a. m. – 8:30 p. m.',
+    fare: '$3.200 COP',
+    duration: '≈ 25 min',
+    description: 'Ruta de salida sur hacia la frontera con Ecuador, ideal para pasajeros con destino al puente de Rumichaca.',
+    stops: [
+      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428, main: true },
+      { name: 'Av. Colombia', lat: 0.8230, lng: -77.6470 },
+      { name: 'Barrio Emaús', lat: 0.8140, lng: -77.6560 },
+      { name: 'Peaje Panamericana Sur', lat: 0.8055, lng: -77.6620 },
+      { name: 'Puente de Rumichaca', lat: 0.7995, lng: -77.6675, main: true },
+    ],
+  },
+  {
+    id: 'r3',
+    short: 'R3',
+    name: 'Centro — Las Lajas',
+    from: 'Parque La Independencia',
+    to: 'Santuario de Las Lajas',
+    color: '#1F7A6C',
+    frequency: '20 – 25 min',
+    hours: '6:00 a. m. – 7:00 p. m.',
+    fare: '$4.000 COP',
+    duration: '≈ 35 min',
+    description: 'Ruta turística y de peregrinación hacia el Santuario de Las Lajas, con parada en el mirador de la vía.',
+    stops: [
+      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428, main: true },
+      { name: 'Barrio Las Cuadras', lat: 0.8225, lng: -77.6280 },
+      { name: 'Vereda Miraflores', lat: 0.8140, lng: -77.6060 },
+      { name: 'Mirador Las Lajas', lat: 0.8075, lng: -77.5930 },
+      { name: 'Santuario de Las Lajas', lat: 0.8043, lng: -77.5859, main: true },
+    ],
+  },
+  {
+    id: 'r4',
+    short: 'R4',
+    name: 'Ciudadela — Hospital',
+    from: 'Ciudadela Norte',
+    to: 'Hospital Civil',
+    color: '#3B6EA8',
+    frequency: '10 – 12 min',
+    hours: '5:15 a. m. – 9:00 p. m.',
+    fare: '$2.600 COP',
+    duration: '≈ 20 min',
+    description: 'Conecta los barrios del norte con el centro y el Hospital Civil, útil para citas médicas y trámites.',
+    stops: [
+      { name: 'Ciudadela Norte', lat: 0.8455, lng: -77.6455, main: true },
+      { name: 'Barrio Obonuco Vía', lat: 0.8400, lng: -77.6440 },
+      { name: 'Calle 18 Comercial', lat: 0.8350, lng: -77.6420 },
+      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428 },
+      { name: 'Hospital Civil', lat: 0.8265, lng: -77.6395, main: true },
+    ],
+  },
+  {
+    id: 'r5',
+    short: 'R5',
+    name: 'San Pedro — Universidad',
+    from: 'Barrio San Pedro',
+    to: 'Sede Universitaria',
+    color: '#7A8A4B',
+    frequency: '15 – 18 min',
+    hours: '6:00 a. m. – 8:00 p. m.',
+    fare: '$2.600 COP',
+    duration: '≈ 15 min',
+    description: 'Ruta corta que enlaza el barrio San Pedro con la zona universitaria y el sector de Bomboná.',
+    stops: [
+      { name: 'Barrio San Pedro', lat: 0.8180, lng: -77.6300, main: true },
+      { name: 'Sector Bomboná', lat: 0.8230, lng: -77.6360 },
+      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428 },
+      { name: 'Sede Universitaria', lat: 0.8330, lng: -77.6480, main: true },
+    ],
+  },
+];
+
+/* ============================================================
+   MAPA
+   ============================================================ */
+const map = L.map('map', { zoomControl: false }).setView(CENTER, 14);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  maxZoom: 19,
+}).addTo(map);
+
+function stopIcon(color, big) {
+  const size = big ? 16 : 11;
+  const border = big ? 3.5 : 2.5;
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:#fff;border:${border}px solid ${color};box-shadow:0 1px 4px rgba(18,42,61,.45)"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+const layers = {}; // id -> { line, markers: [] }
+const allBounds = [];
+
+routes.forEach(route => {
+  const latlngs = route.stops.map(s => [s.lat, s.lng]);
+  latlngs.forEach(ll => allBounds.push(ll));
+
+  const line = L.polyline(latlngs, {
+    color: route.color,
+    weight: 4,
+    opacity: 0.4,
+    lineJoin: 'round',
+  }).addTo(map);
+
+  const markers = route.stops.map(stop => {
+    const m = L.marker([stop.lat, stop.lng], { icon: stopIcon(route.color, stop.main) }).addTo(map);
+    m.bindPopup(`
+      <div class="font-body">
+        <div style="font-weight:600;color:#122A3D;margin-bottom:2px;">${stop.name}</div>
+        <div style="color:${route.color};font-weight:600;font-size:11px;">${route.short} · ${route.name}</div>
+      </div>
+    `);
+    return m;
+  });
+
+  line.on('click', () => setActiveRoute(route.id));
+
+  layers[route.id] = { line, markers };
+});
+
+map.fitBounds(allBounds, { padding: [40, 40] });
+
+document.getElementById('resetViewBtn').addEventListener('click', () => {
+  activeRouteId = null;
+  routes.forEach(r => resetRouteStyle(r.id));
+  map.fitBounds(allBounds, { padding: [40, 40] });
+  document.getElementById('routeDetail').classList.add('hidden');
+  document.getElementById('emptyState').classList.remove('hidden');
+  renderRouteList();
+});
+
+function resetRouteStyle(id) {
+  layers[id].line.setStyle({ weight: 4, opacity: 0.4 });
+}
+
+function highlightRouteStyle(id) {
+  layers[id].line.setStyle({ weight: 6, opacity: 0.95 });
+  layers[id].line.bringToFront();
+}
+
+/* ============================================================
+   PANEL LATERAL — LISTA Y DETALLE
+   ============================================================ */
+let activeRouteId = null;
+let countdownInterval = null;
+
+const routeListEl = document.getElementById('routeList');
+const detailEl = document.getElementById('routeDetail');
+const emptyStateEl = document.getElementById('emptyState');
+const searchInput = document.getElementById('searchInput');
+
+function renderRouteList(filter = '') {
+  const q = filter.trim().toLowerCase();
+  const filtered = routes.filter(r =>
+    !q || [r.name, r.from, r.to].join(' ').toLowerCase().includes(q)
+  );
+
+  routeListEl.innerHTML = '';
+
+  if (filtered.length === 0) {
+    routeListEl.innerHTML = `<p class="text-[13px] text-muted py-3">No hay rutas que coincidan con "${filter}".</p>`;
+    return;
+  }
+
+  filtered.forEach(route => {
+    const active = route.id === activeRouteId;
+    const card = document.createElement('button');
+    card.className = `route-card w-full text-left bg-panel border rounded-xl p-3 flex items-start gap-3 ${
+      active ? 'border-2' : 'border border-line hover:border-gold/70'
+    }`;
+    if (active) card.style.borderColor = route.color;
+
+    card.innerHTML = `
+      <div class="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-display font-semibold text-[13px] text-white"
+           style="background:${route.color}">${route.short}</div>
+      <div class="min-w-0 flex-1">
+        <div class="font-medium text-[14px] text-ink truncate">${route.name}</div>
+        <div class="text-[12px] text-muted truncate">${route.from} → ${route.to}</div>
+      </div>
+      <div class="shrink-0 text-[11px] text-muted tnum mt-1">${route.frequency.split(' ')[0]} min</div>
+    `;
+    card.addEventListener('click', () => setActiveRoute(route.id));
+    routeListEl.appendChild(card);
+  });
+}
+
+function randomEta(freqLabel) {
+  const nums = freqLabel.match(/\d+/g).map(Number);
+  const lo = nums[0] || 5, hi = nums[nums.length - 1] || 15;
+  return Math.max(1, Math.round(lo / 2 + Math.random() * (hi - lo / 2)));
+}
+
+function renderDetail(route) {
+  emptyStateEl.classList.add('hidden');
+  detailEl.classList.remove('hidden');
+
+  const stopsHtml = route.stops.map((s, i) => `
+    <div class="stop-row relative pl-6">
+      <div class="absolute left-0 top-1 w-3 h-3 rounded-full border-2" style="border-color:${route.color}; background:${s.main ? route.color : '#fff'}"></div>
+      <div class="stop-line absolute left-[5px] top-4 bottom-[-14px] w-[2px]" style="background:${route.color}33"></div>
+      <div class="pb-4">
+        <div class="text-[13.5px] font-medium text-ink">${s.name}</div>
+        ${s.main ? `<div class="text-[11px] text-muted">Paradero principal</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  detailEl.innerHTML = `
+    <div class="border-t border-line pt-4">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:${route.color}"></span>
+        <h3 class="font-display font-semibold text-ink text-[15px]">${route.name}</h3>
+      </div>
+      <p class="text-[13px] text-muted mb-4">${route.description}</p>
+
+      <div class="rounded-xl p-3 mb-4 flex items-center justify-between" style="background:${route.color}14">
+        <div>
+          <div class="text-[11px] text-muted">Próximo bus estimado</div>
+          <div id="etaValue" class="text-xl font-display font-semibold tnum" style="color:${route.color}">-- min</div>
+        </div>
+        <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:${route.color}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+            <rect x="4" y="9" width="16" height="7" rx="1.5" stroke="#fff" stroke-width="1.6"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 mb-5">
+        <div class="bg-panel border border-line rounded-lg p-2.5">
+          <div class="text-[11px] text-muted">Frecuencia</div>
+          <div class="text-[13.5px] font-medium text-ink tnum">${route.frequency}</div>
+        </div>
+        <div class="bg-panel border border-line rounded-lg p-2.5">
+          <div class="text-[11px] text-muted">Horario</div>
+          <div class="text-[13.5px] font-medium text-ink tnum">${route.hours}</div>
+        </div>
+        <div class="bg-panel border border-line rounded-lg p-2.5">
+          <div class="text-[11px] text-muted">Duración aprox.</div>
+          <div class="text-[13.5px] font-medium text-ink tnum">${route.duration}</div>
+        </div>
+        <div class="bg-panel border border-line rounded-lg p-2.5">
+          <div class="text-[11px] text-muted">Tarifa</div>
+          <div class="text-[13.5px] font-medium text-ink tnum">${route.fare}</div>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-muted mb-1 font-medium">Puntos clave de parada</div>
+      <div class="mt-2">${stopsHtml}</div>
+    </div>
+  `;
+
+  updateEta(route);
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => updateEta(route), 15000);
+}
+
+function updateEta(route) {
+  const el = document.getElementById('etaValue');
+  if (!el) return;
+  el.textContent = `${randomEta(route.frequency)} min`;
+}
+
+function setActiveRoute(id) {
+  if (activeRouteId) resetRouteStyle(activeRouteId);
+  activeRouteId = id;
+  highlightRouteStyle(id);
+
+  const route = routes.find(r => r.id === id);
+  const bounds = route.stops.map(s => [s.lat, s.lng]);
+  map.fitBounds(bounds, { padding: [60, 60] });
+
+  renderRouteList(searchInput.value);
+  renderDetail(route);
+
+  if (window.innerWidth < 1024) {
+    detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+searchInput.addEventListener('input', (e) => renderRouteList(e.target.value));
+
+renderRouteList();
+
+/* ============================================================
+   RELOJ
+   ============================================================ */
+function tickClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('clock').textContent = `${h}:${m}`;
+}
+tickClock();
+setInterval(tickClock, 1000 * 30);
+</script>
+
+</body>
+</html>
