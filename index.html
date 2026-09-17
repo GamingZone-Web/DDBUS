@@ -80,6 +80,21 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
 .field input{border:0;background:none;flex:1;font:inherit;color:inherit;min-width:0}
 .field input:focus{outline:none}
 .field input::placeholder{color:var(--ink-2)}
+
+/* ---------- Autocompletado (origen / destino) ---------- */
+.autowrap{position:relative;margin-bottom:9px}
+.autowrap .field{margin-bottom:0}
+.suggest{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:#1f2c34;border:1px solid #2c3d47;border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:260px;overflow-y:auto;display:none}
+.suggest.open{display:block}
+.suggest .sug-item{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #26343d}
+.suggest .sug-item:last-child{border-bottom:0}
+.suggest .sug-item:hover,.suggest .sug-item.active{background:#243541}
+.suggest .sug-ico{width:26px;height:26px;border-radius:8px;background:rgba(0,223,154,.12);color:#00df9a;display:grid;place-items:center;flex:none;font-size:13px}
+.suggest .sug-txt{min-width:0}
+.suggest .sug-txt b{display:block;font-size:13.5px;color:#EEF3F2;font-weight:600}
+.suggest .sug-txt b mark{background:none;color:#00df9a;padding:0}
+.suggest .sug-txt span{display:block;font-size:11.5px;color:#8FA3AC}
+.suggest .sug-empty{padding:14px 12px;font-size:13px;color:#8FA3AC;text-align:center}
 .pin{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#08221f;background:var(--teal);flex:none}
 .pin.b{background:var(--red);color:#2a0d09}
 .btn{width:100%;border:0;border-radius:10px;padding:12px;background:var(--teal);color:#06231f;font-weight:700}
@@ -150,8 +165,14 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
     <div class="pane" id="viaje" role="tabpanel">
       <h2>Planea tu viaje</h2>
       <p class="lead">Elige desde dónde sales y a dónde vas en Ipiales. Te mostramos las rutas que te sirven.</p>
-      <div class="field"><span class="pin">A</span><input id="origen" placeholder="Punto de origen (ej. Parque Principal)"></div>
-      <div class="field"><span class="pin b">B</span><input id="destino" placeholder="Punto de destino (ej. Terminal de Transportes)"></div>
+      <div class="autowrap">
+        <div class="field"><span class="pin">A</span><input id="origen" autocomplete="off" placeholder="Punto de origen (ej. Parque Principal)"></div>
+        <div class="suggest" id="sug-origen" role="listbox"></div>
+      </div>
+      <div class="autowrap">
+        <div class="field"><span class="pin b">B</span><input id="destino" autocomplete="off" placeholder="Punto de destino (ej. Terminal de Transportes)"></div>
+        <div class="suggest" id="sug-destino" role="listbox"></div>
+      </div>
       <button class="btn" id="buscar">Buscar rutas</button>
       <div id="resultado" style="margin-top:14px"></div>
       <ol class="steps">
@@ -247,6 +268,95 @@ const REFS=[
  {n:"Catedral de Ipiales",ll:[0.8272,-77.6443]},{n:"Alcaldía Municipal",ll:[0.8262,-77.6455]},
  {n:"Estadio Municipal",ll:[0.8224,-77.6402]},{n:"Puente Internacional de Rumichaca",ll:[0.8118,-77.6664]}
 ];
+
+/* =================== BASE LOCAL DE LUGARES (mock) =================== */
+/* Alimenta el buscador predictivo de origen/destino. Sustituir por datos oficiales cuando existan. */
+const LUGARES=[
+ {n:"Terminal de Transportes",t:"Paradero",ico:"🚏"},
+ {n:"Parque Principal / Parque 20 de Julio",t:"Punto de referencia",ico:"📍"},
+ {n:"Hospital Civil de Ipiales",t:"Punto de referencia",ico:"🏥"},
+ {n:"Santuario de Las Lajas",t:"Punto de referencia",ico:"⛪"},
+ {n:"Plaza de Mercado",t:"Paradero",ico:"🚏"},
+ {n:"San Vicente",t:"Barrio",ico:"🏘️"},
+ {n:"La Victoria",t:"Barrio",ico:"🏘️"},
+ {n:"Altos de Chapaliko",t:"Barrio",ico:"🏘️"},
+ {n:"Barrio Obrero",t:"Barrio",ico:"🏘️"},
+ {n:"Barrio Panamericano",t:"Barrio",ico:"🏘️"},
+ {n:"Ciudadela Maridiaz",t:"Barrio",ico:"🏘️"},
+ {n:"Puente Internacional de Rumichaca",t:"Punto de referencia",ico:"🌉"},
+ {n:"Aeropuerto San Luis",t:"Punto de referencia",ico:"✈️"},
+ {n:"Estadio Municipal",t:"Punto de referencia",ico:"🏟️"},
+ {n:"Alcaldía Municipal de Ipiales",t:"Punto de referencia",ico:"🏛️"},
+ {n:"Catedral de Ipiales",t:"Punto de referencia",ico:"⛪"},
+ {n:"Universidad de Nariño – sede Ipiales",t:"Punto de referencia",ico:"🎓"},
+ {n:"Colegio Ciudad de Ipiales",t:"Punto de referencia",ico:"🏫"},
+ {n:"Barrio Champagnat",t:"Barrio",ico:"🏘️"},
+ {n:"Barrio Cristo Rey",t:"Barrio",ico:"🏘️"},
+ {n:"Barrio El Rosal",t:"Barrio",ico:"🏘️"},
+ {n:"Paradero IP-01 · Parque Principal",t:"Paradero",ico:"🚏"},
+ {n:"Paradero IP-07 · Terminal",t:"Paradero",ico:"🚏"},
+ {n:"Paradero IP-12 · Hospital Civil",t:"Paradero",ico:"🚏"},
+ {n:"Paradero IP-23 · Las Lajas",t:"Paradero",ico:"🚏"},
+ {n:"Paradero IP-27 · San Vicente",t:"Paradero",ico:"🚏"}
+];
+
+/* =================== AUTOCOMPLETADO (origen / destino) =================== */
+function normaliza(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+function resalta(nombre,q){
+  const i=normaliza(nombre).indexOf(q);
+  if(i<0||!q)return nombre;
+  return nombre.slice(0,i)+"<mark>"+nombre.slice(i,i+q.length)+"</mark>"+nombre.slice(i+q.length);
+}
+function initAutocomplete(inputId,boxId){
+  const input=document.getElementById(inputId),box=document.getElementById(boxId);
+  let activeIdx=-1,items=[];
+
+  function render(lista,q){
+    items=lista;activeIdx=-1;
+    box.innerHTML=lista.length
+      ? lista.map((l,i)=>`<div class="sug-item" role="option" data-i="${i}"><span class="sug-ico">${l.ico}</span><span class="sug-txt"><b>${resalta(l.n,q)}</b><span>${l.t}</span></span></div>`).join("")
+      : `<div class="sug-empty">No se encontraron paraderos o puntos cercanos</div>`;
+    box.classList.add("open");
+  }
+
+  input.addEventListener("input",()=>{
+    const q=normaliza(input.value.trim());
+    if(!q){box.classList.remove("open");box.innerHTML="";return}
+    const coincidencias=LUGARES.filter(l=>normaliza(l.n).includes(q)).slice(0,8);
+    render(coincidencias,q);
+  });
+
+  input.addEventListener("keydown",e=>{
+    if(!box.classList.contains("open")||!items.length)return;
+    const nodos=box.querySelectorAll(".sug-item");
+    if(e.key==="ArrowDown"){e.preventDefault();activeIdx=Math.min(activeIdx+1,items.length-1)}
+    else if(e.key==="ArrowUp"){e.preventDefault();activeIdx=Math.max(activeIdx-1,0)}
+    else if(e.key==="Enter"){if(activeIdx>-1){e.preventDefault();elegir(items[activeIdx])}return}
+    else if(e.key==="Escape"){box.classList.remove("open");return}
+    else return;
+    nodos.forEach((n,i)=>n.classList.toggle("active",i===activeIdx));
+    nodos[activeIdx]?.scrollIntoView({block:"nearest"});
+  });
+
+  function elegir(lugar){
+    input.value=lugar.n;
+    box.classList.remove("open");
+    box.innerHTML="";
+    input.focus();
+  }
+
+  box.addEventListener("click",e=>{
+    const el=e.target.closest(".sug-item");
+    if(!el)return;
+    elegir(items[Number(el.dataset.i)]);
+  });
+
+  document.addEventListener("click",e=>{
+    if(!box.contains(e.target)&&e.target!==input)box.classList.remove("open");
+  });
+}
+initAutocomplete("origen","sug-origen");
+initAutocomplete("destino","sug-destino");
 
 /* =================== MAPA LEAFLET =================== */
 const map=L.map("map",{zoomControl:false,center:CENTRO,zoom:ZOOM});
