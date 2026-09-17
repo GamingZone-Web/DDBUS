@@ -1,215 +1,342 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DDBUS Ipiales — Planea tus viajes</title>
-<link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DDBUS Ipiales — Rutas y paraderos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Leaflet 1.9.4 — CSS esencial embebido (la CDN de estilos se bloquea en el host) ===== */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,
+.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;background:#0B1519;font-family:inherit}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.leaflet-tile{filter:inherit;visibility:hidden}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
+.leaflet-overlay-pane svg{-moz-user-select:none}
+.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}
+.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}
+.leaflet-popup-pane{z-index:700}.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top{position:absolute;z-index:1000;pointer-events:none;top:0}
+.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none;bottom:0}
+.leaflet-left{left:0}.leaflet-right{right:0}
+.leaflet-right .leaflet-control{float:right;margin-right:10px}.leaflet-left .leaflet-control{margin-left:10px}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
+.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive{cursor:grabbing}
+.leaflet-marker-icon,.leaflet-interactive{cursor:pointer}
+.leaflet-container a{color:var(--teal)}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
+.leaflet-popup-content-wrapper{background:var(--panel);color:var(--ink);border-radius:12px;border:1px solid var(--line);padding:2px}
+.leaflet-popup-content{margin:12px 14px;font-size:13.5px;line-height:1.45;min-height:1px}
+.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin:0 0 0 -20px;overflow:hidden;pointer-events:none}
+.leaflet-popup-tip{width:14px;height:14px;padding:1px;margin:-8px auto 0;background:var(--panel);border:1px solid var(--line);transform:rotate(45deg)}
+.leaflet-container a.leaflet-popup-close-button{position:absolute;top:4px;right:6px;width:22px;height:22px;font:16px/22px var(--sans);color:var(--ink-2);text-align:center;text-decoration:none}
+.leaflet-tooltip{position:absolute;padding:4px 8px;background:var(--ink);color:var(--panel);border-radius:6px;font-size:12px;white-space:nowrap;pointer-events:none}
+.leaflet-control-attribution{background:rgba(0,0,0,.55);color:#cfe0e6;padding:2px 7px;font-size:10.5px;border-radius:6px 0 0 0}
+
+/* ===== DDBUS Ipiales ===== */
+:root{
+  --bg:#0B151B; --panel:#152430; --panel-2:#1B303D; --ink:#EEF3F2; --ink-2:#95AAB5;
+  --line:#26414F; --teal:#3FBFA9; --teal-soft:#16363A; --amber:#E8912B; --red:#E05B4C;
+  --r:14px; --sans:"Archivo",system-ui,sans-serif; --narrow:"Archivo Narrow",var(--sans);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.topbar{display:flex;align-items:center;gap:18px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px;font-family:var(--narrow);font-weight:700;font-size:26px}
+.brand span{color:var(--teal)}
+.brand small{font-family:var(--sans);font-weight:500;font-size:12px;color:var(--ink-2)}
+.meta{display:flex;gap:10px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
+.chip b{font-family:var(--narrow);font-size:18px}
+.dot{width:9px;height:9px;border-radius:50%;background:#2BAE66;box-shadow:0 0 0 4px rgba(43,174,102,.2)}
+
+.app{display:grid;grid-template-columns:392px 1fr;gap:14px;padding:14px;height:calc(100dvh - 61px);min-height:540px}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden}
+.mapwrap{border:1px solid var(--line);border-radius:var(--r);position:relative;overflow:hidden;display:flex;flex-direction:column}
+#map{flex:1;min-height:0}
+
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{flex:1 0 auto;background:none;border:0;padding:12px 10px 10px;font-size:13px;font-weight:600;color:var(--ink-2);border-bottom:3px solid transparent}
+.tab[aria-selected="true"]{color:var(--teal);border-bottom-color:var(--teal);background:var(--teal-soft)}
+.pane{padding:16px;overflow-y:auto;flex:1}
+.pane[hidden]{display:none}
+h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
+.lead{color:var(--ink-2);font-size:13.5px;margin:0 0 14px}
+
+.field{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--panel-2);margin-bottom:9px}
+.field input{border:0;background:none;flex:1;font:inherit;color:inherit;min-width:0}
+.field input:focus{outline:none}
+.field input::placeholder{color:var(--ink-2)}
+.pin{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#08221f;background:var(--teal);flex:none}
+.pin.b{background:var(--red);color:#2a0d09}
+.btn{width:100%;border:0;border-radius:10px;padding:12px;background:var(--teal);color:#06231f;font-weight:700}
+.btn.ghost{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);padding:7px 11px;width:auto;font-size:12.5px;font-weight:500;border-radius:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+
+.steps{list-style:none;margin:18px 0 0;padding:0;counter-reset:s}
+.steps li{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.steps li::before{counter-increment:s;content:counter(s);font-family:var(--narrow);font-weight:700;background:var(--teal-soft);color:var(--teal);width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:none}
+.steps strong{display:block;font-size:14px}
+.steps span{color:var(--ink-2);font-size:13px}
+
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--panel-2)}
+.card h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+.code{font-family:var(--narrow);font-weight:700;font-size:12px;background:var(--ink);color:var(--panel);padding:2px 7px;border-radius:6px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 9px}
+.tag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+.filters{display:flex;gap:6px;margin-bottom:12px}
+.filters button{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:13px}
+.filters button[aria-pressed="true"]{background:var(--teal);color:#06231f;border-color:var(--teal);font-weight:600}
+.line{width:12px;height:12px;border-radius:4px;flex:none}
+.sched{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.sched div{background:var(--panel);border-radius:8px;padding:7px;text-align:center}
+.sched b{display:block;font-size:11px;color:var(--ink-2);font-weight:600}
+.sched span{font-family:var(--narrow);font-size:13.5px}
+.call{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-left:4px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:9px;background:var(--panel-2)}
+.call a{background:var(--red);color:#2a0d09;text-decoration:none;font-size:13px;font-weight:700;padding:7px 14px;border-radius:999px}
+.call small{display:block;color:var(--ink-2)}
+
+/* controles sobre el mapa */
+.layers{position:absolute;top:12px;left:12px;z-index:1100;background:rgba(21,36,48,.95);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;backdrop-filter:blur(4px)}
+.layers label{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer}
+.layers input{accent-color:var(--teal)}
+.zoomctl{position:absolute;top:12px;right:12px;z-index:1100;display:flex;flex-direction:column;gap:6px}
+.zoomctl button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(21,36,48,.95);font-size:18px;font-weight:600;display:grid;place-items:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;padding:9px 12px;background:var(--panel);border-top:1px solid var(--line)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend button{background:none;border:0;padding:0;display:flex;align-items:center;gap:6px;font-size:12.5px}
+.offline{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1050;background:rgba(21,36,48,.96);border:1px solid var(--line);border-radius:12px;padding:14px 18px;max-width:330px;font-size:13px;color:var(--ink-2);display:none}
+.offline strong{color:var(--ink);display:block;margin-bottom:4px}
+.stopdot{background:var(--teal);border:3px solid #06231f;border-radius:50%;box-shadow:0 0 0 2px var(--teal)}
+@media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.mapwrap{height:62dvh}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
 </head>
 <body>
 
-<div class="app-shell">
+<header class="topbar">
+  <div class="brand">DD<span>BUS</span> Ipiales <small>Transporte urbano municipal</small></div>
+  <div class="meta">
+    <div class="chip">Pasaje corriente <b>$2.500</b></div>
+    <div class="chip">Estudiante / adulto mayor <b>$1.800</b></div>
+    <div class="chip"><span class="dot"></span> Servicio activo · 5:30 a.m. – 8:30 p.m.</div>
+  </div>
+</header>
 
-  <!-- ===================== BARRA SUPERIOR ===================== -->
-  <header class="topbar">
-    <div class="topbar__row">
-      <div class="topbar__brand">
-        <div class="topbar__brand-mark">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-            <rect x="4" y="9" width="16" height="7" rx="1.5" stroke="#fff" stroke-width="1.6"/>
-            <circle cx="8" cy="18.5" r="1.4" fill="#fff"/>
-            <circle cx="16" cy="18.5" r="1.4" fill="#fff"/>
-          </svg>
-        </div>
-        <div>
-          <div class="topbar__brand-name">DDBUS Ipiales</div>
-          <div class="topbar__brand-sub">Sistema Estratégico de Transporte</div>
-        </div>
-      </div>
-
-      <nav class="topbar__nav" aria-label="Navegación principal">
-        <a href="#/inicio" data-nav-link="inicio">Inicio</a>
-        <a href="#/rutas" data-nav-link="rutas">Rutas</a>
-        <a href="#/paraderos" data-nav-link="paraderos">Paraderos</a>
-        <a href="#/tutorial" data-nav-link="tutorial">Ayuda</a>
-        <a href="#/seguridad" data-nav-link="seguridad">Seguridad</a>
-      </nav>
-
-      <div class="topbar__partners" aria-hidden="true">
-        <span class="partner-badge">Alcaldía de Ipiales</span>
-        <span class="partner-badge">SETP</span>
-      </div>
-
-      <div class="topbar__social">
-        <a class="social-btn" href="#" aria-label="Facebook" onclick="return false;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 9h3V5h-3c-2.2 0-4 1.8-4 4v2H8v4h2v7h4v-7h3l1-4h-4V9c0-.6.4-1 1-1z" fill="currentColor"/></svg>
-        </a>
-        <a class="social-btn" href="#" aria-label="Instagram" onclick="return false;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor"/></svg>
-        </a>
-      </div>
+<main class="app">
+  <!-- ================= PANEL LATERAL ================= -->
+  <section class="side" aria-label="Panel de consulta">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-pane="viaje">Planea tu viaje</button>
+      <button class="tab" role="tab" aria-selected="false" data-pane="paraderos">Paraderos</button>
+      <button class="tab" role="tab" aria-selected="false" data-pane="rutas">Rutas</button>
+      <button class="tab" role="tab" aria-selected="false" data-pane="ayuda">Tutorial</button>
+      <button class="tab" role="tab" aria-selected="false" data-pane="seguridad">Seguridad</button>
     </div>
-  </header>
 
-  <!-- ===================== CONTENIDO ===================== -->
-  <main>
+    <div class="pane" id="viaje" role="tabpanel">
+      <h2>Planea tu viaje</h2>
+      <p class="lead">Elige desde dónde sales y a dónde vas en Ipiales. Te mostramos las rutas que te sirven.</p>
+      <div class="field"><span class="pin">A</span><input id="origen" placeholder="Punto de origen (ej. Parque Principal)"></div>
+      <div class="field"><span class="pin b">B</span><input id="destino" placeholder="Punto de destino (ej. Terminal de Transportes)"></div>
+      <button class="btn" id="buscar">Buscar rutas</button>
+      <div id="resultado" style="margin-top:14px"></div>
+      <ol class="steps">
+        <li><div><strong>Selecciona el punto de origen</strong><span>Escríbelo o toca un paradero en el mapa.</span></div></li>
+        <li><div><strong>Selecciona el punto de destino</strong><span>Puedes usar un punto de referencia de la ciudad.</span></div></li>
+        <li><div><strong>Presiona búsqueda</strong><span>Verás las rutas, paraderos y el trazado sobre el mapa.</span></div></li>
+      </ol>
+    </div>
 
-    <!-- ---------- VISTA: INICIO / DASHBOARD ---------- -->
-    <section class="view" data-view="inicio">
-      <div class="view__inner">
+    <div class="pane" id="paraderos" role="tabpanel" hidden>
+      <h2>Paraderos</h2>
+      <p class="lead">Paraderos señalizados de la zona urbana, con sentido y tipo de señal.</p>
+      <div class="field"><input id="q-par" placeholder="Buscar por código o nombre"></div>
+      <div id="lista-par"></div>
+    </div>
 
-        <div class="hero">
-          <div class="hero__eyebrow">Planea tus viajes</div>
-          <h1 class="hero__title">¿A dónde te llevamos hoy?</h1>
-        </div>
-
-        <div class="fare-card">
-          <div class="fare-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.8"/><path d="M9 9.5c0-1 1-1.8 3-1.8s3 .8 3 1.8-1 1.5-3 1.8-3 .8-3 1.9 1 1.8 3 1.8 3-.8 3-1.8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M12 6.5v11" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
-          </div>
-          <div>
-            <div class="fare-card__label">Valor del pasaje</div>
-            <div class="fare-card__value" id="fareValue">$2.700</div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h2 class="panel__title">Cómo planear tu viaje</h2>
-          <ol class="steps">
-            <li>
-              <span class="steps__badge">1</span>
-              <svg class="steps__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-              <span class="step-text">Selecciona tu punto de origen</span>
-            </li>
-            <li>
-              <span class="steps__badge">2</span>
-              <svg class="steps__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 3v18M6 4h11l-2.5 3.5L17 11H6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-              <span class="step-text">Luego selecciona tu punto de destino</span>
-            </li>
-            <li>
-              <span class="steps__badge">3</span>
-              <svg class="steps__icon" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-              <span class="step-text">Presiona el ícono de búsqueda para encontrar rutas</span>
-            </li>
-          </ol>
-        </div>
-
-        <h2 class="section-title">Accesos directos</h2>
-        <div class="shortcut-grid">
-          <a class="shortcut-card" href="#/paraderos">
-            <div class="shortcut-card__icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg>
-            </div>
-            <p class="shortcut-card__title">Paraderos</p>
-            <p class="shortcut-card__subtitle">Consulta los paraderos de la ciudad</p>
-          </a>
-
-          <a class="shortcut-card" href="#/rutas">
-            <div class="shortcut-card__icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="9" width="16" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
-            </div>
-            <p class="shortcut-card__title">Rutas</p>
-            <p class="shortcut-card__subtitle">Rutas de transporte disponibles</p>
-          </a>
-
-          <a class="shortcut-card" href="#/tutorial">
-            <div class="shortcut-card__icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 9.5c0-1.4 1.1-2.5 2.5-2.5s2.5 1 2.5 2.2c0 1.6-2.5 1.8-2.5 3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.5" r="0.9" fill="currentColor"/></svg>
-            </div>
-            <p class="shortcut-card__title">Tutorial</p>
-            <p class="shortcut-card__subtitle">Aprende a usar la app paso a paso</p>
-          </a>
-
-          <a class="shortcut-card" href="#/seguridad">
-            <div class="shortcut-card__icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <p class="shortcut-card__title">Seguridad</p>
-            <p class="shortcut-card__subtitle">Líneas de atención y prevención</p>
-          </a>
-        </div>
-
+    <div class="pane" id="rutas" role="tabpanel" hidden>
+      <h2>Rutas urbanas</h2>
+      <p class="lead">Horarios de referencia por día de la semana.</p>
+      <div class="filters">
+        <button aria-pressed="true" data-f="op">En operación</button>
+        <button aria-pressed="false" data-f="all">Todas</button>
       </div>
-    </section>
+      <div id="lista-rutas"></div>
+    </div>
 
-    <!-- ---------- VISTA: RUTAS (placeholder, Módulo 4 pendiente) ---------- -->
-    <section class="view" data-view="rutas">
-      <div class="view__inner">
-        <div class="placeholder">
-          <div class="placeholder__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="9" width="16" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
-          </div>
-          <p class="placeholder__title">Rutas</p>
-          <p class="placeholder__text">Próximamente: filtros "En operación / Todas", contador total y tarjetas de ruta con código, nombre y horarios por día (L-V, SÁB, DOM).</p>
-        </div>
-      </div>
-    </section>
+    <div class="pane" id="ayuda" role="tabpanel" hidden>
+      <h2>Cómo usar DDBUS Ipiales</h2>
+      <p class="lead">Cuatro pasos para moverte por la ciudad sin perder viajes.</p>
+      <ol class="steps">
+        <li><div><strong>Ubica tu paradero</strong><span>Busca el código en la señal (ej. IP-12) o tócalo en el mapa.</span></div></li>
+        <li><div><strong>Revisa la ruta y el sentido</strong><span>Cada paradero indica si va hacia el centro o hacia los barrios.</span></div></li>
+        <li><div><strong>Confirma el horario</strong><span>Los domingos y festivos la frecuencia baja.</span></div></li>
+        <li><div><strong>Paga tu pasaje al abordar</strong><span>Lleva efectivo o tu documento para la tarifa diferencial.</span></div></li>
+      </ol>
+    </div>
 
-    <!-- ---------- VISTA: PARADEROS (placeholder, Módulo 3 pendiente) ---------- -->
-    <section class="view" data-view="paraderos">
-      <div class="view__inner">
-        <div class="placeholder">
-          <div class="placeholder__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg>
-          </div>
-          <p class="placeholder__title">Paraderos</p>
-          <p class="placeholder__text">Próximamente: barra de búsqueda "Buscar por nombre..." y tarjetas con botones "Ver rutas" / "Ver mapa" e indicador de paradero techado.</p>
-        </div>
-      </div>
-    </section>
+    <div class="pane" id="seguridad" role="tabpanel" hidden>
+      <h2>Seguridad y líneas de atención</h2>
+      <p class="lead">Si algo ocurre durante tu viaje, repórtalo. Estas líneas atienden en Ipiales.</p>
+      <div class="call"><div><strong>Línea única de emergencias</strong><small>Policía, ambulancia y bomberos</small></div><a href="tel:123">Llamar 123</a></div>
+      <div class="call"><div><strong>Atención al usuario DDBUS</strong><small>Quejas, objetos olvidados y sugerencias</small></div><a href="tel:+5727733333">Llamar</a></div>
+      <div class="call"><div><strong>Tránsito y Transporte Ipiales</strong><small>Accidentes e incidentes viales</small></div><a href="tel:127">Llamar 127</a></div>
+      <div class="call"><div><strong>Línea de violencia de género</strong><small>Atención confidencial 24 horas</small></div><a href="tel:155">Llamar 155</a></div>
+      <div class="card"><h3>Recomendaciones a bordo</h3><p class="lead" style="margin:6px 0 0">Sujétate de los pasamanos, cede los asientos preferenciales y desciende solo en paraderos autorizados.</p></div>
+    </div>
+  </section>
 
-    <!-- ---------- VISTA: TUTORIAL (placeholder, Módulo 5 pendiente) ---------- -->
-    <section class="view" data-view="tutorial">
-      <div class="view__inner">
-        <div class="placeholder">
-          <div class="placeholder__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 9.5c0-1.4 1.1-2.5 2.5-2.5s2.5 1 2.5 2.2c0 1.6-2.5 1.8-2.5 3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-          </div>
-          <p class="placeholder__title">Tutorial / Ayuda</p>
-          <p class="placeholder__text">Próximamente: cuadrícula con tarjetas de "Calcula tu ruta", "Puntos favoritos", "Rutas y Paraderos" y "SRC y Bicicletas".</p>
-        </div>
-      </div>
-    </section>
+  <!-- ================= MAPA REAL ================= -->
+  <section class="mapwrap">
+    <div id="map"></div>
+    <div class="layers">
+      <label><input type="checkbox" checked data-layer="rutas"> Trazado de rutas</label>
+      <label><input type="checkbox" checked data-layer="paraderos"> Paraderos</label>
+      <label><input type="checkbox" checked data-layer="refs"> Puntos de referencia</label>
+      <label><input type="checkbox" checked data-layer="base"> Cartografía base</label>
+    </div>
+    <div class="zoomctl">
+      <button id="zin" aria-label="Acercar">+</button>
+      <button id="zout" aria-label="Alejar">−</button>
+      <button id="zreset" aria-label="Centrar en Ipiales" style="font-size:13px">⌖</button>
+    </div>
+    <div class="offline" id="offline"><strong>La cartografía base no se pudo cargar</strong>Las rutas y paraderos siguen visibles sobre coordenadas reales. Al publicar este archivo en el dominio de DDBUS, los mosaicos de OpenStreetMap cargan con normalidad.</div>
+    <div class="legend" id="legend"></div>
+  </section>
+</main>
 
-    <!-- ---------- VISTA: SEGURIDAD (placeholder, Módulo 6 pendiente) ---------- -->
-    <section class="view" data-view="seguridad">
-      <div class="view__inner">
-        <div class="placeholder">
-          <div class="placeholder__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.6"/></svg>
-          </div>
-          <p class="placeholder__title">Atención y Seguridad</p>
-          <p class="placeholder__text">Próximamente: prevención de acoso en el transporte público y líneas de atención con enlaces <code>tel:</code> para llamar directamente.</p>
-        </div>
-      </div>
-    </section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+/* =================== DATOS (reemplazar por los oficiales) =================== */
+const CENTRO=[0.8246,-77.6414], ZOOM=14;
+const RUTAS=[
+ {id:"R1",nom:"Centro – Las Lajas",color:"#3FBFA9",op:true,hor:{"L-V":"5:30 – 8:30 p.m.","SÁB":"6:00 – 8:00 p.m.","DOM":"7:00 – 7:00 p.m."},d:"Parque Principal, carrera 7, vía Las Lajas.",
+  coords:[[0.8268,-77.6449],[0.8255,-77.6408],[0.8231,-77.6356],[0.8190,-77.6250],[0.8143,-77.6104],[0.8094,-77.5963],[0.8052,-77.5861]]},
+ {id:"R2",nom:"San Vicente – Terminal",color:"#E8912B",op:true,hor:{"L-V":"5:40 – 8:15 p.m.","SÁB":"6:15 – 7:45 p.m.","DOM":"7:30 – 6:30 p.m."},d:"Barrio San Vicente, calle 14, Terminal de Transportes.",
+  coords:[[0.8398,-77.6382],[0.8347,-77.6402],[0.8300,-77.6431],[0.8268,-77.6449],[0.8241,-77.6470],[0.8210,-77.6489],[0.8185,-77.6462]]},
+ {id:"R3",nom:"La Victoria – Hospital",color:"#5B9BE8",op:true,hor:{"L-V":"5:50 – 8:00 p.m.","SÁB":"6:30 – 7:30 p.m.","DOM":"Sin servicio"},d:"La Victoria, avenida Panamericana, Hospital Civil.",
+  coords:[[0.8321,-77.6281],[0.8296,-77.6330],[0.8268,-77.6390],[0.8247,-77.6437],[0.8223,-77.6494],[0.8196,-77.6541]]},
+ {id:"R4",nom:"Aeropuerto – Centro",color:"#B77BE0",op:false,hor:{"L-V":"6:10 – 7:20 p.m.","SÁB":"7:00 – 6:00 p.m.","DOM":"Sin servicio"},d:"Aeropuerto San Luis, vía Panamericana, centro histórico.",
+  coords:[[0.8612,-77.6718],[0.8520,-77.6640],[0.8430,-77.6561],[0.8350,-77.6500],[0.8290,-77.6462],[0.8262,-77.6443]]}
+];
+const PARADEROS=[
+ {c:"IP-01",n:"Parque Principal",s:"Sentido norte",t:true,r:["R1","R2","R4"],ll:[0.8268,-77.6449]},
+ {c:"IP-04",n:"Plaza de Mercado",s:"Sentido sur",t:false,r:["R2"],ll:[0.8241,-77.6470]},
+ {c:"IP-07",n:"Terminal de Transportes",s:"Ambos sentidos",t:true,r:["R2"],ll:[0.8185,-77.6462]},
+ {c:"IP-12",n:"Hospital Civil",s:"Sentido occidente",t:true,r:["R3"],ll:[0.8196,-77.6541]},
+ {c:"IP-18",n:"Av. Panamericana – Colegio",s:"Sentido oriente",t:false,r:["R3"],ll:[0.8296,-77.6330]},
+ {c:"IP-23",n:"Santuario de Las Lajas",s:"Ambos sentidos",t:true,r:["R1"],ll:[0.8052,-77.5861]},
+ {c:"IP-27",n:"Barrio San Vicente",s:"Sentido norte",t:false,r:["R2"],ll:[0.8398,-77.6382]},
+ {c:"IP-31",n:"Aeropuerto San Luis",s:"Sentido oriente",t:true,r:["R4"],ll:[0.8612,-77.6718]}
+];
+const REFS=[
+ {n:"Catedral de Ipiales",ll:[0.8272,-77.6443]},{n:"Alcaldía Municipal",ll:[0.8262,-77.6455]},
+ {n:"Estadio Municipal",ll:[0.8224,-77.6402]},{n:"Puente Internacional de Rumichaca",ll:[0.8118,-77.6664]}
+];
 
-  </main>
+/* =================== MAPA LEAFLET =================== */
+const map=L.map("map",{zoomControl:false,center:CENTRO,zoom:ZOOM});
+const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'DDBUS Ipiales · &copy; OpenStreetMap'});
+base.on("tileerror",()=>document.getElementById("offline").style.display="block");
+base.addTo(map);
 
-  <!-- ===================== BARRA INFERIOR (móvil) ===================== -->
-  <nav class="bottomnav" aria-label="Navegación móvil">
-    <a href="#/inicio" data-nav-link="inicio">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8"/></svg>
-      Inicio
-    </a>
-    <a href="#/rutas" data-nav-link="rutas">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="9" width="16" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
-      Rutas
-    </a>
-    <a href="#/paraderos" data-nav-link="paraderos">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.2" stroke="currentColor" stroke-width="1.6"/></svg>
-      Paraderos
-    </a>
-    <a href="#/tutorial" data-nav-link="tutorial">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg>
-      Más
-    </a>
-  </nav>
+const capas={rutas:L.layerGroup().addTo(map),paraderos:L.layerGroup().addTo(map),refs:L.layerGroup().addTo(map)};
+const trazos={};
+RUTAS.forEach(r=>{
+  trazos[r.id]=L.polyline(r.coords,{color:r.color,weight:5,opacity:r.op?.95:.4,dashArray:r.op?null:"8 8"})
+    .bindPopup(`<strong>${r.id}</strong> ${r.nom}<br>${r.d}<br>L-V ${r.hor["L-V"]}`).addTo(capas.rutas);
+});
+PARADEROS.forEach(s=>{
+  L.marker(s.ll,{icon:L.divIcon({className:"stopdot",iconSize:[14,14],iconAnchor:[7,7]}),title:`${s.c} · ${s.n}`})
+   .bindPopup(`<strong>${s.c}</strong> ${s.n}<br>${s.s} · ${s.t?"Techado":"Señal sencilla"}<br>Rutas ${s.r.join(", ")}`)
+   .on("click",()=>resaltar(s.r)).addTo(capas.paraderos);
+});
+REFS.forEach(f=>{
+  L.circleMarker(f.ll,{radius:6,color:"#EEF3F2",weight:2,fillColor:"#0B151B",fillOpacity:.85})
+   .bindTooltip(f.n,{direction:"right"}).addTo(capas.refs);
+});
+function resaltar(ids){RUTAS.forEach(r=>trazos[r.id].setStyle({opacity:ids.includes(r.id)?1:.12,weight:ids.includes(r.id)?6:4}))}
+function limpiar(){RUTAS.forEach(r=>trazos[r.id].setStyle({opacity:r.op?.95:.4,weight:5}))}
 
-</div>
+document.getElementById("zin").onclick=()=>map.zoomIn();
+document.getElementById("zout").onclick=()=>map.zoomOut();
+document.getElementById("zreset").onclick=()=>{map.setView(CENTRO,ZOOM);limpiar()};
+document.querySelectorAll("[data-layer]").forEach(cb=>cb.onchange=()=>{
+  const k=cb.dataset.layer,capa=k==="base"?base:capas[k];
+  cb.checked?map.addLayer(capa):map.removeLayer(capa);
+});
+addEventListener("resize",()=>map.invalidateSize());
 
-<script src="data.js"></script>
-<script src="app.js"></script>
+/* =================== LEYENDA =================== */
+document.getElementById("legend").innerHTML=RUTAS.map(r=>
+ `<button data-leg="${r.id}"><i class="line" style="background:${r.color};opacity:${r.op?1:.45}"></i>${r.id} ${r.nom}</button>`).join("")
+ +`<button data-leg="all" style="color:var(--ink-2)">Ver todas</button>`;
+document.getElementById("legend").onclick=e=>{const b=e.target.closest("[data-leg]");if(!b)return;
+ const id=b.dataset.leg;if(id==="all"){limpiar();map.setView(CENTRO,ZOOM);return}
+ resaltar([id]);map.fitBounds(trazos[id].getBounds(),{padding:[40,40]})};
+
+/* =================== PESTAÑAS =================== */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
+  document.querySelectorAll(".pane").forEach(p=>p.hidden=p.id!==t.dataset.pane);
+});
+
+/* =================== PARADEROS =================== */
+const listaPar=document.getElementById("lista-par");
+function pintarPar(f=""){const q=f.toLowerCase();
+ listaPar.innerHTML=PARADEROS.filter(s=>(s.c+s.n).toLowerCase().includes(q)).map(s=>`
+  <div class="card"><h3><span class="code">${s.c}</span> ${s.n}</h3>
+   <div class="tags"><span class="tag">${s.s}</span><span class="tag">${s.t?"Paradero techado":"Señal sencilla"}</span><span class="tag">Rutas ${s.r.join(", ")}</span></div>
+   <div class="row"><button class="btn ghost" data-ver="${s.c}">Ver rutas</button><button class="btn ghost" data-mapa="${s.c}">Ver en mapa</button></div></div>`).join("")
+  ||`<p class="lead">No hay paraderos con ese código o nombre. Prueba con “IP-” o el nombre del barrio.</p>`}
+pintarPar();
+document.getElementById("q-par").oninput=e=>pintarPar(e.target.value);
+listaPar.onclick=e=>{const b=e.target.closest("button");if(!b)return;
+ const s=PARADEROS.find(p=>p.c===(b.dataset.ver||b.dataset.mapa));if(!s)return;
+ if(b.dataset.ver){document.querySelector('[data-pane="rutas"]').click();pintarRutas(filtro,s.r);resaltar(s.r)}
+ else{map.setView(s.ll,16);resaltar(s.r)}};
+
+/* =================== RUTAS =================== */
+const listaRut=document.getElementById("lista-rutas");let filtro="op";
+function pintarRutas(f=filtro,solo=null){
+ listaRut.innerHTML=RUTAS.filter(r=>(f==="all"||r.op)&&(!solo||solo.includes(r.id))).map(r=>`
+  <div class="card"><h3><i class="line" style="background:${r.color}"></i><span class="code">${r.id}</span> ${r.nom}</h3>
+   <div class="tags"><span class="tag">${r.op?"En operación":"Fuera de servicio"}</span><span class="tag">${r.d}</span></div>
+   <div class="sched">${Object.entries(r.hor).map(([k,v])=>`<div><b>${k}</b><span>${v}</span></div>`).join("")}</div>
+   <div class="row" style="margin-top:9px"><button class="btn ghost" data-traz="${r.id}">Ver trazado en el mapa</button></div></div>`).join("")
+  ||`<p class="lead">No hay rutas que coincidan con el filtro.</p>`}
+pintarRutas();
+document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{filtro=b.dataset.f;
+ document.querySelectorAll("[data-f]").forEach(x=>x.setAttribute("aria-pressed",x===b));pintarRutas()});
+listaRut.onclick=e=>{const b=e.target.closest("[data-traz]");if(!b)return;
+ resaltar([b.dataset.traz]);map.fitBounds(trazos[b.dataset.traz].getBounds(),{padding:[40,40]})};
+
+/* =================== PLANEADOR =================== */
+document.getElementById("buscar").onclick=()=>{
+ const o=origen.value.trim().toLowerCase(),d=destino.value.trim().toLowerCase(),out=document.getElementById("resultado");
+ if(!o||!d){out.innerHTML=`<p class="lead">Falta un punto. Completa origen y destino para buscar.</p>`;return}
+ const co=PARADEROS.filter(s=>(s.n+s.c).toLowerCase().includes(o)),cd=PARADEROS.filter(s=>(s.n+s.c).toLowerCase().includes(d));
+ const ids=[...new Set(co.flatMap(s=>s.r).filter(r=>cd.some(s=>s.r.includes(r))))];
+ if(!ids.length){out.innerHTML=`<p class="lead">No encontramos una ruta directa entre esos puntos. Intenta con el nombre de un paradero de la lista.</p>`;return}
+ resaltar(ids);
+ const b=L.latLngBounds(ids.map(i=>trazos[i].getBounds()).reduce((a,c)=>a.extend(c)));
+ map.fitBounds(b,{padding:[40,40]});
+ out.innerHTML=`<p class="lead">Rutas directas disponibles:</p>`+ids.map(id=>{const r=RUTAS.find(x=>x.id===id);
+  return `<div class="card"><h3><i class="line" style="background:${r.color}"></i><span class="code">${r.id}</span> ${r.nom}</h3><div class="tags"><span class="tag">L-V ${r.hor["L-V"]}</span><span class="tag">Pasaje $2.500</span></div></div>`}).join("")};
+</script>
 </body>
 </html>
