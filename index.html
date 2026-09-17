@@ -1,510 +1,580 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DDBUS Ipiales — Rutas y paraderos</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@600;700&display=swap" rel="stylesheet">
-<style>
-/* ===== Leaflet 1.9.4 — CSS esencial embebido (la CDN de estilos se bloquea en el host) ===== */
-.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,
-.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
-.leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;background:#0B1519;font-family:inherit}
-.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
-.leaflet-tile{filter:inherit;visibility:hidden}
-.leaflet-tile-loaded{visibility:inherit}
-.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
-.leaflet-overlay-pane svg{-moz-user-select:none}
-.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}
-.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}
-.leaflet-popup-pane{z-index:700}.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
-.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
-.leaflet-top{position:absolute;z-index:1000;pointer-events:none;top:0}
-.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none;bottom:0}
-.leaflet-left{left:0}.leaflet-right{right:0}
-.leaflet-right .leaflet-control{float:right;margin-right:10px}.leaflet-left .leaflet-control{margin-left:10px}
-.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
-.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive{cursor:grabbing}
-.leaflet-marker-icon,.leaflet-interactive{cursor:pointer}
-.leaflet-container a{color:var(--teal)}
-.leaflet-zoom-animated{transform-origin:0 0}
-.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear}
-.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}
-.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
-.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}
-.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
-.leaflet-popup-content-wrapper{background:var(--panel);color:var(--ink);border-radius:12px;border:1px solid var(--line);padding:2px}
-.leaflet-popup-content{margin:12px 14px;font-size:13.5px;line-height:1.45;min-height:1px}
-.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin:0 0 0 -20px;overflow:hidden;pointer-events:none}
-.leaflet-popup-tip{width:14px;height:14px;padding:1px;margin:-8px auto 0;background:var(--panel);border:1px solid var(--line);transform:rotate(45deg)}
-.leaflet-container a.leaflet-popup-close-button{position:absolute;top:4px;right:6px;width:22px;height:22px;font:16px/22px var(--sans);color:var(--ink-2);text-align:center;text-decoration:none}
-.leaflet-tooltip{position:absolute;padding:4px 8px;background:var(--ink);color:var(--panel);border-radius:6px;font-size:12px;white-space:nowrap;pointer-events:none}
-.leaflet-control-attribution{background:rgba(0,0,0,.55);color:#cfe0e6;padding:2px 7px;font-size:10.5px;border-radius:6px 0 0 0}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDBUS Ipiales - Rutas, paraderos y buses</title>
+    <!-- Leaflet CSS para el mapa interactivo -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-/* ===== DDBUS Ipiales ===== */
-:root{
-  --bg:#0B151B; --panel:#152430; --panel-2:#1B303D; --ink:#EEF3F2; --ink-2:#95AAB5;
-  --line:#26414F; --teal:#3FBFA9; --teal-soft:#16363A; --amber:#E8912B; --red:#E05B4C;
-  --r:14px; --sans:"Archivo",system-ui,sans-serif; --narrow:"Archivo Narrow",var(--sans);
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
-button{font:inherit;color:inherit;cursor:pointer}
-:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+        body {
+            background-color: #0b131a;
+            color: #e6edf3;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-.topbar{display:flex;align-items:center;gap:18px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
-.brand{display:flex;align-items:baseline;gap:8px;font-family:var(--narrow);font-weight:700;font-size:26px}
-.brand span{color:var(--teal)}
-.brand small{font-family:var(--sans);font-weight:500;font-size:12px;color:var(--ink-2)}
-.meta{display:flex;gap:10px;margin-left:auto;align-items:center;flex-wrap:wrap}
-.chip{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
-.chip b{font-family:var(--narrow);font-size:18px}
-.dot{width:9px;height:9px;border-radius:50%;background:#2BAE66;box-shadow:0 0 0 4px rgba(43,174,102,.2)}
+        /* Barra Superior */
+        header {
+            background-color: #111b21;
+            border-bottom: 1px solid #222d34;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            height: 60px;
+        }
 
-.app{display:grid;grid-template-columns:392px 1fr;gap:14px;padding:14px;height:calc(100dvh - 61px);min-height:540px}
-.side{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden}
-.mapwrap{border:1px solid var(--line);border-radius:var(--r);position:relative;overflow:hidden;display:flex;flex-direction:column}
-#map{flex:1;min-height:0}
+        .logo-container {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
-.tab{flex:1 0 auto;background:none;border:0;padding:12px 10px 10px;font-size:13px;font-weight:600;color:var(--ink-2);border-bottom:3px solid transparent}
-.tab[aria-selected="true"]{color:var(--teal);border-bottom-color:var(--teal);background:var(--teal-soft)}
-.pane{padding:16px;overflow-y:auto;flex:1}
-.pane[hidden]{display:none}
-h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
-.lead{color:var(--ink-2);font-size:13.5px;margin:0 0 14px}
+        .badges-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
 
-.field{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--panel-2);margin-bottom:9px}
-.field input{border:0;background:none;flex:1;font:inherit;color:inherit;min-width:0}
-.field input:focus{outline:none}
-.field input::placeholder{color:var(--ink-2)}
+        .badge {
+            background-color: #1f2c34;
+            border: 1px solid #2f3b44;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-/* ---------- Autocompletado (origen / destino) ---------- */
-.autowrap{position:relative;margin-bottom:9px}
-.autowrap .field{margin-bottom:0}
-.suggest{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:#1f2c34;border:1px solid #2c3d47;border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:260px;overflow-y:auto;display:none}
-.suggest.open{display:block}
-.suggest .sug-item{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #26343d}
-.suggest .sug-item:last-child{border-bottom:0}
-.suggest .sug-item:hover,.suggest .sug-item.active{background:#243541}
-.suggest .sug-ico{width:26px;height:26px;border-radius:8px;background:rgba(0,223,154,.12);color:#00df9a;display:grid;place-items:center;flex:none;font-size:13px}
-.suggest .sug-txt{min-width:0}
-.suggest .sug-txt b{display:block;font-size:13.5px;color:#EEF3F2;font-weight:600}
-.suggest .sug-txt b mark{background:none;color:#00df9a;padding:0}
-.suggest .sug-txt span{display:block;font-size:11.5px;color:#8FA3AC}
-.suggest .sug-empty{padding:14px 12px;font-size:13px;color:#8FA3AC;text-align:center}
-.pin{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#08221f;background:var(--teal);flex:none}
-.pin.b{background:var(--red);color:#2a0d09}
-.btn{width:100%;border:0;border-radius:10px;padding:12px;background:var(--teal);color:#06231f;font-weight:700}
-.btn.ghost{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);padding:7px 11px;width:auto;font-size:12.5px;font-weight:500;border-radius:8px}
-.row{display:flex;gap:8px;flex-wrap:wrap}
+        .badge span {
+            font-weight: bold;
+            color: #00df9a;
+        }
 
-.steps{list-style:none;margin:18px 0 0;padding:0;counter-reset:s}
-.steps li{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
-.steps li::before{counter-increment:s;content:counter(s);font-family:var(--narrow);font-weight:700;background:var(--teal-soft);color:var(--teal);width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:none}
-.steps strong{display:block;font-size:14px}
-.steps span{color:var(--ink-2);font-size:13px}
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00df9a;
+            border-radius: 50%;
+            display: inline-block;
+        }
 
-.card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--panel-2)}
-.card h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
-.code{font-family:var(--narrow);font-weight:700;font-size:12px;background:var(--ink);color:var(--panel);padding:2px 7px;border-radius:6px}
-.tags{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 9px}
-.tag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
-.filters{display:flex;gap:6px;margin-bottom:12px}
-.filters button{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:13px}
-.filters button[aria-pressed="true"]{background:var(--teal);color:#06231f;border-color:var(--teal);font-weight:600}
-.line{width:12px;height:12px;border-radius:4px;flex:none}
-.sched{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-.sched div{background:var(--panel);border-radius:8px;padding:7px;text-align:center}
-.sched b{display:block;font-size:11px;color:var(--ink-2);font-weight:600}
-.sched span{font-family:var(--narrow);font-size:13.5px}
-.call{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-left:4px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:9px;background:var(--panel-2)}
-.call a{background:var(--red);color:#2a0d09;text-decoration:none;font-size:13px;font-weight:700;padding:7px 14px;border-radius:999px}
-.call small{display:block;color:var(--ink-2)}
+        /* Contenedor Principal */
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+            position: relative;
+        }
 
-/* controles sobre el mapa */
-.layers{position:absolute;top:12px;left:12px;z-index:1100;background:rgba(21,36,48,.95);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;backdrop-filter:blur(4px)}
-.layers label{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer}
-.layers input{accent-color:var(--teal)}
-.zoomctl{position:absolute;top:12px;right:12px;z-index:1100;display:flex;flex-direction:column;gap:6px}
-.zoomctl button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(21,36,48,.95);font-size:18px;font-weight:600;display:grid;place-items:center}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;padding:9px 12px;background:var(--panel);border-top:1px solid var(--line)}
-.legend span{display:flex;align-items:center;gap:6px}
-.legend button{background:none;border:0;padding:0;display:flex;align-items:center;gap:6px;font-size:12.5px}
-.offline{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1050;background:rgba(21,36,48,.96);border:1px solid var(--line);border-radius:12px;padding:14px 18px;max-width:330px;font-size:13px;color:var(--ink-2);display:none}
-.offline strong{color:var(--ink);display:block;margin-bottom:4px}
-.stopdot{background:var(--teal);border:3px solid #06231f;border-radius:50%;box-shadow:0 0 0 2px var(--teal)}
-.busicon{display:grid;place-items:center;border-radius:50%;border:3px solid #0B151B;box-shadow:0 3px 8px rgba(0,0,0,.5);font-size:15px;transition:transform .25s linear}
-.busicon.live{animation:pulso 1.8s ease-in-out infinite}
-@keyframes pulso{0%,100%{box-shadow:0 3px 8px rgba(0,0,0,.5),0 0 0 0 rgba(255,255,255,.35)}50%{box-shadow:0 3px 8px rgba(0,0,0,.5),0 0 0 6px rgba(255,255,255,0)}}
-.bus-pop b{color:#EEF3F2}
-.bus-pop .bp-ruta{display:inline-flex;align-items:center;gap:6px;font-family:var(--narrow);font-weight:700;margin-bottom:4px}
-.bus-pop .bp-line{width:10px;height:10px;border-radius:3px;flex:none}
-.bus-pop .bp-track{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);margin:4px 0}
-.bus-pop .bp-eta{display:inline-block;margin-top:5px;background:var(--teal-soft);color:var(--teal);font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
-@media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.mapwrap{height:62dvh}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-</style>
+        /* Panel Izquierdo */
+        .sidebar {
+            width: 420px;
+            background-color: #111b21;
+            border-right: 1px solid #222d34;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        /* Pestañas del Menú */
+        .tabs {
+            display: flex;
+            background-color: #162229;
+            padding: 10px 10px 0 10px;
+            gap: 5px;
+            border-bottom: 1px solid #222d34;
+            overflow-x: auto;
+        }
+
+        .tab {
+            background: transparent;
+            border: none;
+            color: #8696a0;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background-color: #1f2c34;
+            color: #00df9a;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .panel-desc {
+            font-size: 0.85rem;
+            color: #8696a0;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        /* Formulario de Rutas y Sugerencias */
+        .input-group {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            width: 100%;
+            background-color: #1f2c34;
+            border: 1px solid #2f3b44;
+            border-radius: 8px;
+            padding: 12px 15px 12px 40px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #00df9a;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .icon-a { background-color: #00a884; }
+        .icon-b { background-color: #ea4335; }
+
+        /* Lista de Autocompletado */
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: #1f2c34;
+            border: 1px solid #2f3b44;
+            border-radius: 0 0 8px 8px;
+            z-index: 1000;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: #e6edf3;
+            border-bottom: 1px solid #2f3b44;
+        }
+
+        .suggestion-item:hover {
+            background-color: #2a3942;
+            color: #00df9a;
+        }
+
+        .btn-search {
+            width: 100%;
+            background-color: #00df9a;
+            color: #0b131a;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .btn-search:hover {
+            background-color: #00c284;
+        }
+
+        /* Guía de pasos */
+        .step-guide {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+            border-top: 1px solid #222d34;
+            padding-top: 20px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .step-number {
+            background-color: #1f2c34;
+            color: #00df9a;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-text h4 {
+            font-size: 0.9rem;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .step-text p {
+            font-size: 0.8rem;
+            color: #8696a0;
+        }
+
+        /* Área de Mapa (Derecha) */
+        .map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #101d24;
+        }
+
+        /* Leyenda Inferior flotante */
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(17, 27, 33, 0.9);
+            border: 1px solid #2f3b44;
+            padding: 12px 18px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #e6edf3;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Estilo personalizado para los popups del mapa en modo oscuro */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #111b21 !important;
+            color: #e6edf3 !important;
+            border: 1px solid #2f3b44;
+            border-radius: 8px;
+        }
+        .leaflet-popup-content b {
+            color: #00df9a;
+        }
+    </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">DD<span>BUS</span> Ipiales <small>Transporte urbano municipal</small></div>
-  <div class="meta">
-    <div class="chip">Pasaje corriente <b>$2.500</b></div>
-    <div class="chip">Estudiante / adulto mayor <b>$1.800</b></div>
-    <div class="chip"><span class="dot"></span> Servicio activo · 5:30 a.m. – 8:30 p.m.</div>
-  </div>
-</header>
+    <!-- Barra Superior -->
+    <header>
+        <div class="logo-container">
+            🚌 DDBUS Ipiales <span style="font-size: 0.75rem; color: #8696a0; font-weight: normal;">| Rutas y paraderos</span>
+        </div>
+        <div class="badges-container">
+            <div class="badge">Pasaje corriente: <span>$2.500</span></div>
+            <div class="badge">Estudiante / Adulto mayor: <span>$1.800</span></div>
+            <div class="badge">
+                <span class="status-dot"></span> Servicio activo · <span>5:30 a.m. – 8:30 p.m.</span>
+            </div>
+        </div>
+    </header>
 
-<main class="app">
-  <!-- ================= PANEL LATERAL ================= -->
-  <section class="side" aria-label="Panel de consulta">
-    <div class="tabs" role="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-pane="viaje">Planea tu viaje</button>
-      <button class="tab" role="tab" aria-selected="false" data-pane="paraderos">Paraderos</button>
-      <button class="tab" role="tab" aria-selected="false" data-pane="rutas">Rutas</button>
-      <button class="tab" role="tab" aria-selected="false" data-pane="ayuda">Tutorial</button>
-      <button class="tab" role="tab" aria-selected="false" data-pane="seguridad">Seguridad</button>
+    <!-- Contenido Principal -->
+    <div class="main-container">
+        
+        <!-- Panel Izquierdo -->
+        <div class="sidebar">
+            <div class="tabs">
+                <button class="tab active">Planea tu viaje</button>
+                <button class="tab">Paraderos</button>
+                <button class="tab">Rutas</button>
+                <button class="tab">Tutorial</button>
+                <button class="tab">Seguridad</button>
+            </div>
+
+            <div class="tab-content">
+                <div class="panel-title">Planea tu viaje</div>
+                <div class="panel-desc">Elige desde dónde sales y a dónde vas en Ipiales. Te mostramos las rutas que te sirven.</div>
+
+                <div class="input-group">
+                    <div class="input-icon icon-a">A</div>
+                    <input type="text" id="origin-input" placeholder="Selecciona un punto de origen o paradero" autocomplete="off">
+                    <div id="origin-suggestions" class="suggestions-list"></div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-icon icon-b">B</div>
+                    <input type="text" id="destination-input" placeholder="¿Cuál es tu destino?" autocomplete="off">
+                    <div id="destination-suggestions" class="suggestions-list"></div>
+                </div>
+
+                <button class="btn-search" id="search-btn">Buscar rutas</button>
+
+                <div class="step-guide">
+                    <div class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-text">
+                            <h4>Selecciona el punto de origen</h4>
+                            <p>Escríbelo o toca un paradero directamente en el mapa.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-text">
+                            <h4>Selecciona el punto de destino</h4>
+                            <p>Puedes usar un punto de referencia clave de la ciudad.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-text">
+                            <h4>Presiona búsqueda</h4>
+                            <p>Verás las rutas, paraderos y el trazado detallado en el mapa.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa Real (Derecha) -->
+        <div class="map-container">
+            <div id="map"></div>
+
+            <!-- Leyenda inferior de rutas -->
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #00a884;"></div> R1 Centro – Las Lajas
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #f59e0b;"></div> R2 San Vicente – Terminal
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #3b82f6;"></div> R3 La Victoria – Hospital
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="pane" id="viaje" role="tabpanel">
-      <h2>Planea tu viaje</h2>
-      <p class="lead">Elige desde dónde sales y a dónde vas en Ipiales. Te mostramos las rutas que te sirven.</p>
-      <div class="autowrap">
-        <div class="field"><span class="pin">A</span><input id="origen" autocomplete="off" placeholder="Punto de origen (ej. Parque Principal)"></div>
-        <div class="suggest" id="sug-origen" role="listbox"></div>
-      </div>
-      <div class="autowrap">
-        <div class="field"><span class="pin b">B</span><input id="destino" autocomplete="off" placeholder="Punto de destino (ej. Terminal de Transportes)"></div>
-        <div class="suggest" id="sug-destino" role="listbox"></div>
-      </div>
-      <button class="btn" id="buscar">Buscar rutas</button>
-      <div id="resultado" style="margin-top:14px"></div>
-      <ol class="steps">
-        <li><div><strong>Selecciona el punto de origen</strong><span>Escríbelo o toca un paradero en el mapa.</span></div></li>
-        <li><div><strong>Selecciona el punto de destino</strong><span>Puedes usar un punto de referencia de la ciudad.</span></div></li>
-        <li><div><strong>Presiona búsqueda</strong><span>Verás las rutas, paraderos y el trazado sobre el mapa.</span></div></li>
-      </ol>
-    </div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // 1. Inicializar el mapa centrado en Ipiales
+        const map = L.map('map', {
+            zoomControl: false
+        }).setView([0.8235, -77.5812], 14);
 
-    <div class="pane" id="paraderos" role="tabpanel" hidden>
-      <h2>Paraderos</h2>
-      <p class="lead">Paraderos señalizados de la zona urbana, con sentido y tipo de señal.</p>
-      <div class="field"><input id="q-par" placeholder="Buscar por código o nombre"></div>
-      <div id="lista-par"></div>
-    </div>
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
-    <div class="pane" id="rutas" role="tabpanel" hidden>
-      <h2>Rutas urbanas</h2>
-      <p class="lead">Horarios de referencia por día de la semana.</p>
-      <div class="filters">
-        <button aria-pressed="true" data-f="op">En operación</button>
-        <button aria-pressed="false" data-f="all">Todas</button>
-      </div>
-      <div id="lista-rutas"></div>
-    </div>
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-    <div class="pane" id="ayuda" role="tabpanel" hidden>
-      <h2>Cómo usar DDBUS Ipiales</h2>
-      <p class="lead">Cuatro pasos para moverte por la ciudad sin perder viajes.</p>
-      <ol class="steps">
-        <li><div><strong>Ubica tu paradero</strong><span>Busca el código en la señal (ej. IP-12) o tócalo en el mapa.</span></div></li>
-        <li><div><strong>Revisa la ruta y el sentido</strong><span>Cada paradero indica si va hacia el centro o hacia los barrios.</span></div></li>
-        <li><div><strong>Confirma el horario</strong><span>Los domingos y festivos la frecuencia baja.</span></div></li>
-        <li><div><strong>Paga tu pasaje al abordar</strong><span>Lleva efectivo o tu documento para la tarifa diferencial.</span></div></li>
-      </ol>
-    </div>
+        // Capa para las líneas de ruta y marcadores de buses
+        let routeLayerGroup = L.layerGroup().addTo(map);
+        let busLayerGroup = L.layerGroup().addTo(map);
 
-    <div class="pane" id="seguridad" role="tabpanel" hidden>
-      <h2>Seguridad y líneas de atención</h2>
-      <p class="lead">Si algo ocurre durante tu viaje, repórtalo. Estas líneas atienden en Ipiales.</p>
-      <div class="call"><div><strong>Línea única de emergencias</strong><small>Policía, ambulancia y bomberos</small></div><a href="tel:123">Llamar 123</a></div>
-      <div class="call"><div><strong>Atención al usuario DDBUS</strong><small>Quejas, objetos olvidados y sugerencias</small></div><a href="tel:+5727733333">Llamar</a></div>
-      <div class="call"><div><strong>Tránsito y Transporte Ipiales</strong><small>Accidentes e incidentes viales</small></div><a href="tel:127">Llamar 127</a></div>
-      <div class="call"><div><strong>Línea de violencia de género</strong><small>Atención confidencial 24 horas</small></div><a href="tel:155">Llamar 155</a></div>
-      <div class="card"><h3>Recomendaciones a bordo</h3><p class="lead" style="margin:6px 0 0">Sujétate de los pasamanos, cede los asientos preferenciales y desciende solo en paraderos autorizados.</p></div>
-    </div>
-  </section>
+        // 2. Base de datos local de paraderos y puntos de referencia en Ipiales
+        const locationsDB = [
+            { name: "Terminal de Transportes Ipiales", coords: [0.8310, -77.5850] },
+            { name: "Parque 20 de Julio (Centro)", coords: [0.8235, -77.5812] },
+            { name: "Hospital Civil de Ipiales", coords: [0.8180, -77.5750] },
+            { name: "San Vicente", coords: [0.8150, -77.5900] },
+            { name: "La Victoria", coords: [0.8350, -77.5700] },
+            { name: "Santuario de Las Lajas", coords: [0.8068, -77.5873] },
+            { name: "Centro Comercial Ipiales Plaza", coords: [0.8280, -77.5780] },
+            { name: "Plaza de Mercado", coords: [0.8210, -77.5840] }
+        ];
 
-  <!-- ================= MAPA REAL ================= -->
-  <section class="mapwrap">
-    <div id="map"></div>
-    <div class="layers">
-      <label><input type="checkbox" checked data-layer="rutas"> Trazado de rutas</label>
-      <label><input type="checkbox" checked data-layer="buses"> Buses en vivo</label>
-      <label><input type="checkbox" checked data-layer="paraderos"> Paraderos</label>
-      <label><input type="checkbox" checked data-layer="refs"> Puntos de referencia</label>
-      <label><input type="checkbox" checked data-layer="base"> Cartografía base</label>
-    </div>
-    <div class="zoomctl">
-      <button id="zin" aria-label="Acercar">+</button>
-      <button id="zout" aria-label="Alejar">−</button>
-      <button id="zreset" aria-label="Centrar en Ipiales" style="font-size:13px">⌖</button>
-    </div>
-    <div class="offline" id="offline"><strong>La cartografía base no se pudo cargar</strong>Las rutas y paraderos siguen visibles sobre coordenadas reales. Al publicar este archivo en el dominio de DDBUS, los mosaicos de OpenStreetMap cargan con normalidad.</div>
-    <div class="legend" id="legend"></div>
-  </section>
-</main>
+        // 3. Simulación de Buses activos en tiempo real con su información de viaje
+        const activeBuses = [
+            {
+                id: "Bus-101",
+                route: "R1 Centro – Las Lajas",
+                coords: [0.8160, -77.5830],
+                origin: "Terminal de Transportes",
+                destination: "Santuario de Las Lajas",
+                eta: "4 min",
+                color: "#00a884"
+            },
+            {
+                id: "Bus-204",
+                route: "R2 San Vicente – Terminal",
+                coords: [0.8270, -77.5800],
+                origin: "San Vicente",
+                destination: "Terminal de Transportes",
+                eta: "7 min",
+                color: "#f59e0b"
+            },
+            {
+                id: "Bus-309",
+                route: "R3 La Victoria – Hospital",
+                coords: [0.8200, -77.5730],
+                origin: "La Victoria",
+                destination: "Hospital Civil de Ipiales",
+                eta: "3 min",
+                color: "#3b82f6"
+            }
+        ];
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script>
-/* =================== DATOS (reemplazar por los oficiales) =================== */
-const CENTRO=[0.8246,-77.6414], ZOOM=14;
-const RUTAS=[
- {id:"R1",nom:"Centro – Las Lajas",color:"#3FBFA9",op:true,hor:{"L-V":"5:30 – 8:30 p.m.","SÁB":"6:00 – 8:00 p.m.","DOM":"7:00 – 7:00 p.m."},d:"Parque Principal, carrera 7, vía Las Lajas.",
-  coords:[[0.8268,-77.6449],[0.8255,-77.6408],[0.8231,-77.6356],[0.8190,-77.6250],[0.8143,-77.6104],[0.8094,-77.5963],[0.8052,-77.5861]]},
- {id:"R2",nom:"San Vicente – Terminal",color:"#E8912B",op:true,hor:{"L-V":"5:40 – 8:15 p.m.","SÁB":"6:15 – 7:45 p.m.","DOM":"7:30 – 6:30 p.m."},d:"Barrio San Vicente, calle 14, Terminal de Transportes.",
-  coords:[[0.8398,-77.6382],[0.8347,-77.6402],[0.8300,-77.6431],[0.8268,-77.6449],[0.8241,-77.6470],[0.8210,-77.6489],[0.8185,-77.6462]]},
- {id:"R3",nom:"La Victoria – Hospital",color:"#5B9BE8",op:true,hor:{"L-V":"5:50 – 8:00 p.m.","SÁB":"6:30 – 7:30 p.m.","DOM":"Sin servicio"},d:"La Victoria, avenida Panamericana, Hospital Civil.",
-  coords:[[0.8321,-77.6281],[0.8296,-77.6330],[0.8268,-77.6390],[0.8247,-77.6437],[0.8223,-77.6494],[0.8196,-77.6541]]},
- {id:"R4",nom:"Aeropuerto – Centro",color:"#B77BE0",op:false,hor:{"L-V":"6:10 – 7:20 p.m.","SÁB":"7:00 – 6:00 p.m.","DOM":"Sin servicio"},d:"Aeropuerto San Luis, vía Panamericana, centro histórico.",
-  coords:[[0.8612,-77.6718],[0.8520,-77.6640],[0.8430,-77.6561],[0.8350,-77.6500],[0.8290,-77.6462],[0.8262,-77.6443]]}
-];
-const PARADEROS=[
- {c:"IP-01",n:"Parque Principal",s:"Sentido norte",t:true,r:["R1","R2","R4"],ll:[0.8268,-77.6449]},
- {c:"IP-04",n:"Plaza de Mercado",s:"Sentido sur",t:false,r:["R2"],ll:[0.8241,-77.6470]},
- {c:"IP-07",n:"Terminal de Transportes",s:"Ambos sentidos",t:true,r:["R2"],ll:[0.8185,-77.6462]},
- {c:"IP-12",n:"Hospital Civil",s:"Sentido occidente",t:true,r:["R3"],ll:[0.8196,-77.6541]},
- {c:"IP-18",n:"Av. Panamericana – Colegio",s:"Sentido oriente",t:false,r:["R3"],ll:[0.8296,-77.6330]},
- {c:"IP-23",n:"Santuario de Las Lajas",s:"Ambos sentidos",t:true,r:["R1"],ll:[0.8052,-77.5861]},
- {c:"IP-27",n:"Barrio San Vicente",s:"Sentido norte",t:false,r:["R2"],ll:[0.8398,-77.6382]},
- {c:"IP-31",n:"Aeropuerto San Luis",s:"Sentido oriente",t:true,r:["R4"],ll:[0.8612,-77.6718]}
-];
-const REFS=[
- {n:"Catedral de Ipiales",ll:[0.8272,-77.6443]},{n:"Alcaldía Municipal",ll:[0.8262,-77.6455]},
- {n:"Estadio Municipal",ll:[0.8224,-77.6402]},{n:"Puente Internacional de Rumichaca",ll:[0.8118,-77.6664]}
-];
+        // Renderizar los buses en el mapa
+        function renderBuses() {
+            busLayerGroup.clearLayers();
+            activeBuses.forEach(bus => {
+                // Crear un icono personalizado estilo bus
+                const busIcon = L.divIcon({
+                    className: 'custom-bus-icon',
+                    html: `<div style="background-color: ${bus.color}; color: white; padding: 5px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 4px;">🚌 ${bus.id.split('-')[1]}</div>`,
+                    iconSize: [60, 30],
+                    iconAnchor: [30, 15]
+                });
 
-/* ---- Buses activos (mock) ---- */
-/* pos: fracción 0–1 recorrida sobre RUTAS[ruta].coords · vel: fracción/seg (simulada) */
-const BUSES=[
- {id:"BUS-104",ruta:"R1",origen:"Terminal de Transportes",destino:"Santuario de Las Lajas",pos:.18,vel:.006,eta:9},
- {id:"BUS-212",ruta:"R2",origen:"Barrio San Vicente",destino:"Terminal de Transportes",pos:.62,vel:.008,eta:4},
- {id:"BUS-087",ruta:"R3",origen:"La Victoria",destino:"Hospital Civil",pos:.35,vel:.007,eta:6},
- {id:"BUS-301",ruta:"R2",origen:"Terminal de Transportes",destino:"Barrio San Vicente",pos:.85,vel:.005,eta:2}
-];
+                const marker = L.marker(bus.coords, { icon: busIcon });
+                
+                // Popup detallado al hacer clic en el bus
+                marker.bindPopup(`
+                    <div style="font-size: 0.9rem; line-height: 1.5;">
+                        <b style="font-size: 1rem; color: ${bus.color};">🚍 ${bus.route}</b><br>
+                        <b>Unidad:</b> ${bus.id}<br>
+                        <b>Viene de:</b> ${bus.origin}<br>
+                        <b>Destino:</b> ${bus.destination}<br>
+                        <b>⏱️ Tiempo estimado:</b> <span style="color: #00df9a; font-weight: bold;">${bus.eta} al siguiente paradero</span>
+                    </div>
+                `);
 
+                busLayerGroup.addLayer(marker);
+            });
+        }
 
-/* =================== BASE LOCAL DE LUGARES (mock) =================== */
-/* Alimenta el buscador predictivo de origen/destino. Sustituir por datos oficiales cuando existan. */
-const LUGARES=[
- {n:"Terminal de Transportes",t:"Paradero",ico:"🚏"},
- {n:"Parque Principal / Parque 20 de Julio",t:"Punto de referencia",ico:"📍"},
- {n:"Hospital Civil de Ipiales",t:"Punto de referencia",ico:"🏥"},
- {n:"Santuario de Las Lajas",t:"Punto de referencia",ico:"⛪"},
- {n:"Plaza de Mercado",t:"Paradero",ico:"🚏"},
- {n:"San Vicente",t:"Barrio",ico:"🏘️"},
- {n:"La Victoria",t:"Barrio",ico:"🏘️"},
- {n:"Altos de Chapaliko",t:"Barrio",ico:"🏘️"},
- {n:"Barrio Obrero",t:"Barrio",ico:"🏘️"},
- {n:"Barrio Panamericano",t:"Barrio",ico:"🏘️"},
- {n:"Ciudadela Maridiaz",t:"Barrio",ico:"🏘️"},
- {n:"Puente Internacional de Rumichaca",t:"Punto de referencia",ico:"🌉"},
- {n:"Aeropuerto San Luis",t:"Punto de referencia",ico:"✈️"},
- {n:"Estadio Municipal",t:"Punto de referencia",ico:"🏟️"},
- {n:"Alcaldía Municipal de Ipiales",t:"Punto de referencia",ico:"🏛️"},
- {n:"Catedral de Ipiales",t:"Punto de referencia",ico:"⛪"},
- {n:"Universidad de Nariño – sede Ipiales",t:"Punto de referencia",ico:"🎓"},
- {n:"Colegio Ciudad de Ipiales",t:"Punto de referencia",ico:"🏫"},
- {n:"Barrio Champagnat",t:"Barrio",ico:"🏘️"},
- {n:"Barrio Cristo Rey",t:"Barrio",ico:"🏘️"},
- {n:"Barrio El Rosal",t:"Barrio",ico:"🏘️"},
- {n:"Paradero IP-01 · Parque Principal",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-07 · Terminal",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-12 · Hospital Civil",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-23 · Las Lajas",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-27 · San Vicente",t:"Paradero",ico:"🚏"}
-];
+        renderBuses();
 
-/* =================== AUTOCOMPLETADO (origen / destino) =================== */
-function normaliza(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
-function resalta(nombre,q){
-  const i=normaliza(nombre).indexOf(q);
-  if(i<0||!q)return nombre;
-  return nombre.slice(0,i)+"<mark>"+nombre.slice(i,i+q.length)+"</mark>"+nombre.slice(i+q.length);
-}
-function initAutocomplete(inputId,boxId){
-  const input=document.getElementById(inputId),box=document.getElementById(boxId);
-  let activeIdx=-1,items=[];
+        // 4. Lógica de Autocompletado para Inputs
+        function setupAutocomplete(inputElement, suggestionsElement) {
+            inputElement.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                suggestionsElement.innerHTML = '';
+                
+                if (query.length === 0) {
+                    suggestionsElement.style.display = 'none';
+                    return;
+                }
 
-  function render(lista,q){
-    items=lista;activeIdx=-1;
-    box.innerHTML=lista.length
-      ? lista.map((l,i)=>`<div class="sug-item" role="option" data-i="${i}"><span class="sug-ico">${l.ico}</span><span class="sug-txt"><b>${resalta(l.n,q)}</b><span>${l.t}</span></span></div>`).join("")
-      : `<div class="sug-empty">No se encontraron paraderos o puntos cercanos</div>`;
-    box.classList.add("open");
-  }
+                const filtered = locationsDB.filter(loc => loc.name.toLowerCase().includes(query));
 
-  input.addEventListener("input",()=>{
-    const q=normaliza(input.value.trim());
-    if(!q){box.classList.remove("open");box.innerHTML="";return}
-    const coincidencias=LUGARES.filter(l=>normaliza(l.n).includes(q)).slice(0,8);
-    render(coincidencias,q);
-  });
+                if (filtered.length > 0) {
+                    suggestionsElement.style.display = 'block';
+                    filtered.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = item.name;
+                        div.addEventListener('click', function() {
+                            inputElement.value = item.name;
+                            suggestionsElement.style.display = 'none';
+                            inputElement.dataset.lat = item.coords[0];
+                            inputElement.dataset.lng = item.coords[1];
+                        });
+                        suggestionsElement.appendChild(div);
+                    });
+                } else {
+                    suggestionsElement.style.display = 'none';
+                }
+            });
 
-  input.addEventListener("keydown",e=>{
-    if(!box.classList.contains("open")||!items.length)return;
-    const nodos=box.querySelectorAll(".sug-item");
-    if(e.key==="ArrowDown"){e.preventDefault();activeIdx=Math.min(activeIdx+1,items.length-1)}
-    else if(e.key==="ArrowUp"){e.preventDefault();activeIdx=Math.max(activeIdx-1,0)}
-    else if(e.key==="Enter"){if(activeIdx>-1){e.preventDefault();elegir(items[activeIdx])}return}
-    else if(e.key==="Escape"){box.classList.remove("open");return}
-    else return;
-    nodos.forEach((n,i)=>n.classList.toggle("active",i===activeIdx));
-    nodos[activeIdx]?.scrollIntoView({block:"nearest"});
-  });
+            // Ocultar sugerencias al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!inputElement.contains(e.target) && !suggestionsElement.contains(e.target)) {
+                    suggestionsElement.style.display = 'none';
+                }
+            });
+        }
 
-  function elegir(lugar){
-    input.value=lugar.n;
-    box.classList.remove("open");
-    box.innerHTML="";
-    input.focus();
-  }
+        setupAutocomplete(document.getElementById('origin-input'), document.getElementById('origin-suggestions'));
+        setupAutocomplete(document.getElementById('destination-input'), document.getElementById('destination-suggestions'));
 
-  box.addEventListener("click",e=>{
-    const el=e.target.closest(".sug-item");
-    if(!el)return;
-    elegir(items[Number(el.dataset.i)]);
-  });
+        // 5. Lógica de Trazado de Ruta al Buscar
+        document.getElementById('search-btn').addEventListener('click', function() {
+            const originInput = document.getElementById('origin-input');
+            const destInput = document.getElementById('destination-input');
 
-  document.addEventListener("click",e=>{
-    if(!box.contains(e.target)&&e.target!==input)box.classList.remove("open");
-  });
-}
-initAutocomplete("origen","sug-origen");
-initAutocomplete("destino","sug-destino");
+            const lat1 = parseFloat(originInput.dataset.lat);
+            const lng1 = parseFloat(originInput.dataset.lng);
+            const lat2 = parseFloat(destInput.dataset.lat);
+            const lng2 = parseFloat(destInput.dataset.lng);
 
-/* =================== MAPA LEAFLET =================== */
-const map=L.map("map",{zoomControl:false,center:CENTRO,zoom:ZOOM});
-const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'DDBUS Ipiales · &copy; OpenStreetMap'});
-base.on("tileerror",()=>document.getElementById("offline").style.display="block");
-base.addTo(map);
+            routeLayerGroup.clearLayers();
 
-const capas={rutas:L.layerGroup().addTo(map),paraderos:L.layerGroup().addTo(map),refs:L.layerGroup().addTo(map),buses:L.layerGroup().addTo(map)};
-const trazos={};
-RUTAS.forEach(r=>{
-  trazos[r.id]=L.polyline(r.coords,{color:r.color,weight:5,opacity:r.op?.95:.4,dashArray:r.op?null:"8 8"})
-    .bindPopup(`<strong>${r.id}</strong> ${r.nom}<br>${r.d}<br>L-V ${r.hor["L-V"]}`).addTo(capas.rutas);
-});
-PARADEROS.forEach(s=>{
-  L.marker(s.ll,{icon:L.divIcon({className:"stopdot",iconSize:[14,14],iconAnchor:[7,7]}),title:`${s.c} · ${s.n}`})
-   .bindPopup(`<strong>${s.c}</strong> ${s.n}<br>${s.s} · ${s.t?"Techado":"Señal sencilla"}<br>Rutas ${s.r.join(", ")}`)
-   .on("click",()=>resaltar(s.r)).addTo(capas.paraderos);
-});
+            if (!isNaN(lat1) && !isNaN(lng1) && !isNaN(lat2) && !isNaN(lng2)) {
+                // Dibujar línea de ruta directa estimada
+                const polyline = L.polyline([[lat1, lng1], [lat2, lng2]], {
+                    color: '#00df9a',
+                    weight: 5,
+                    opacity: 0.8
+                }).addTo(routeLayerGroup);
 
-/* ---------- Buses en tiempo real ---------- */
-function puntoEnRuta(coords,frac){
-  // Interpola linealmente sobre los segmentos de la polilínea según una fracción 0–1
-  const segs=coords.length-1,total=frac*segs,i=Math.min(Math.floor(total),segs-1),t=total-i;
-  const [a,b]=[coords[i],coords[i+1]];
-  return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
-}
-function iconoBus(color){
-  return L.divIcon({className:"busicon live",html:`<div class="busicon live" style="width:30px;height:30px;background:${color}">🚌</div>`,iconSize:[30,30],iconAnchor:[15,15]});
-}
-function popupBus(b){
-  const r=RUTAS.find(x=>x.id===b.ruta);
-  return `<div class="bus-pop">
-    <div class="bp-ruta"><span class="bp-line" style="background:${r.color}"></span>${b.id} · ${r.id} ${r.nom}</div>
-    <div class="bp-track">📍 Ubicación actual: en tránsito por ${r.nom}</div>
-    <div class="bp-track">↪ Viene de: <b>${b.origen}</b></div>
-    <div class="bp-track">➔ Destino: <b>${b.destino}</b></div>
-    <span class="bp-eta">Tiempo estimado: ${b.eta} min</span>
-  </div>`;
-}
-BUSES.forEach(b=>{
-  const r=RUTAS.find(x=>x.id===b.ruta);
-  b.marker=L.marker(puntoEnRuta(r.coords,b.pos),{icon:iconoBus(r.color),title:b.id,zIndexOffset:1000})
-    .bindPopup(popupBus(b),{className:"bus-popup"})
-    .addTo(capas.buses);
-});
-// Simulación de movimiento: avanza cada bus sobre su ruta y recalcula el ETA
-setInterval(()=>{
-  BUSES.forEach(b=>{
-    const r=RUTAS.find(x=>x.id===b.ruta);
-    b.pos+=b.vel;
-    if(b.pos>=1){b.pos=0;[b.origen,b.destino]=[b.destino,b.origen]} // llega y reinicia en sentido contrario
-    b.eta=Math.max(1,Math.round((1-b.pos)*15));
-    b.marker.setLatLng(puntoEnRuta(r.coords,b.pos));
-    if(b.marker.isPopupOpen())b.marker.setPopupContent(popupBus(b));
-  });
-},1200);
-
-REFS.forEach(f=>{
-  L.circleMarker(f.ll,{radius:6,color:"#EEF3F2",weight:2,fillColor:"#0B151B",fillOpacity:.85})
-   .bindTooltip(f.n,{direction:"right"}).addTo(capas.refs);
-});
-function resaltar(ids){RUTAS.forEach(r=>trazos[r.id].setStyle({opacity:ids.includes(r.id)?1:.12,weight:ids.includes(r.id)?6:4}))}
-function limpiar(){RUTAS.forEach(r=>trazos[r.id].setStyle({opacity:r.op?.95:.4,weight:5}))}
-
-document.getElementById("zin").onclick=()=>map.zoomIn();
-document.getElementById("zout").onclick=()=>map.zoomOut();
-document.getElementById("zreset").onclick=()=>{map.setView(CENTRO,ZOOM);limpiar()};
-document.querySelectorAll("[data-layer]").forEach(cb=>cb.onchange=()=>{
-  const k=cb.dataset.layer,capa=k==="base"?base:capas[k];
-  cb.checked?map.addLayer(capa):map.removeLayer(capa);
-});
-addEventListener("resize",()=>map.invalidateSize());
-
-/* =================== LEYENDA =================== */
-document.getElementById("legend").innerHTML=RUTAS.map(r=>
- `<button data-leg="${r.id}"><i class="line" style="background:${r.color};opacity:${r.op?1:.45}"></i>${r.id} ${r.nom}</button>`).join("")
- +`<button data-leg="all" style="color:var(--ink-2)">Ver todas</button>`;
-document.getElementById("legend").onclick=e=>{const b=e.target.closest("[data-leg]");if(!b)return;
- const id=b.dataset.leg;if(id==="all"){limpiar();map.setView(CENTRO,ZOOM);return}
- resaltar([id]);map.fitBounds(trazos[id].getBounds(),{padding:[40,40]})};
-
-/* =================== PESTAÑAS =================== */
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
-  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
-  document.querySelectorAll(".pane").forEach(p=>p.hidden=p.id!==t.dataset.pane);
-});
-
-/* =================== PARADEROS =================== */
-const listaPar=document.getElementById("lista-par");
-function pintarPar(f=""){const q=f.toLowerCase();
- listaPar.innerHTML=PARADEROS.filter(s=>(s.c+s.n).toLowerCase().includes(q)).map(s=>`
-  <div class="card"><h3><span class="code">${s.c}</span> ${s.n}</h3>
-   <div class="tags"><span class="tag">${s.s}</span><span class="tag">${s.t?"Paradero techado":"Señal sencilla"}</span><span class="tag">Rutas ${s.r.join(", ")}</span></div>
-   <div class="row"><button class="btn ghost" data-ver="${s.c}">Ver rutas</button><button class="btn ghost" data-mapa="${s.c}">Ver en mapa</button></div></div>`).join("")
-  ||`<p class="lead">No hay paraderos con ese código o nombre. Prueba con “IP-” o el nombre del barrio.</p>`}
-pintarPar();
-document.getElementById("q-par").oninput=e=>pintarPar(e.target.value);
-listaPar.onclick=e=>{const b=e.target.closest("button");if(!b)return;
- const s=PARADEROS.find(p=>p.c===(b.dataset.ver||b.dataset.mapa));if(!s)return;
- if(b.dataset.ver){document.querySelector('[data-pane="rutas"]').click();pintarRutas(filtro,s.r);resaltar(s.r)}
- else{map.setView(s.ll,16);resaltar(s.r)}};
-
-/* =================== RUTAS =================== */
-const listaRut=document.getElementById("lista-rutas");let filtro="op";
-function pintarRutas(f=filtro,solo=null){
- listaRut.innerHTML=RUTAS.filter(r=>(f==="all"||r.op)&&(!solo||solo.includes(r.id))).map(r=>`
-  <div class="card"><h3><i class="line" style="background:${r.color}"></i><span class="code">${r.id}</span> ${r.nom}</h3>
-   <div class="tags"><span class="tag">${r.op?"En operación":"Fuera de servicio"}</span><span class="tag">${r.d}</span></div>
-   <div class="sched">${Object.entries(r.hor).map(([k,v])=>`<div><b>${k}</b><span>${v}</span></div>`).join("")}</div>
-   <div class="row" style="margin-top:9px"><button class="btn ghost" data-traz="${r.id}">Ver trazado en el mapa</button></div></div>`).join("")
-  ||`<p class="lead">No hay rutas que coincidan con el filtro.</p>`}
-pintarRutas();
-document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{filtro=b.dataset.f;
- document.querySelectorAll("[data-f]").forEach(x=>x.setAttribute("aria-pressed",x===b));pintarRutas()});
-listaRut.onclick=e=>{const b=e.target.closest("[data-traz]");if(!b)return;
- resaltar([b.dataset.traz]);map.fitBounds(trazos[b.dataset.traz].getBounds(),{padding:[40,40]})};
-
-/* =================== PLANEADOR =================== */
-document.getElementById("buscar").onclick=()=>{
- const o=origen.value.trim().toLowerCase(),d=destino.value.trim().toLowerCase(),out=document.getElementById("resultado");
- if(!o||!d){out.innerHTML=`<p class="lead">Falta un punto. Completa origen y destino para buscar.</p>`;return}
- const co=PARADEROS.filter(s=>(s.n+s.c).toLowerCase().includes(o)),cd=PARADEROS.filter(s=>(s.n+s.c).toLowerCase().includes(d));
- const ids=[...new Set(co.flatMap(s=>s.r).filter(r=>cd.some(s=>s.r.includes(r))))];
- if(!ids.length){out.innerHTML=`<p class="lead">No encontramos una ruta directa entre esos puntos. Intenta con el nombre de un paradero de la lista.</p>`;return}
- resaltar(ids);
- const b=L.latLngBounds(ids.map(i=>trazos[i].getBounds()).reduce((a,c)=>a.extend(c)));
- map.fitBounds(b,{padding:[40,40]});
- out.innerHTML=`<p class="lead">Rutas directas disponibles:</p>`+ids.map(id=>{const r=RUTAS.find(x=>x.id===id);
-  return `<div class="card"><h3><i class="line" style="background:${r.color}"></i><span class="code">${r.id}</span> ${r.nom}</h3><div class="tags"><span class="tag">L-V ${r.hor["L-V"]}</span><span class="tag">Pasaje $2.500</span></div></div>`}).join("")};
-</script>
+                // Ajustar el zoom del mapa para abarcar origen y destino
+                map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+            } else {
+                alert("Por favor selecciona un origen y un destino válidos de las sugerencias.");
+            }
+        });
+    </script>
 </body>
 </html>
