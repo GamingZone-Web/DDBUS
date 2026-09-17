@@ -428,7 +428,6 @@
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Capa para las líneas de ruta y marcadores de buses
         let routeLayerGroup = L.layerGroup().addTo(map);
         let busLayerGroup = L.layerGroup().addTo(map);
 
@@ -444,42 +443,94 @@
             { name: "Plaza de Mercado", coords: [0.8210, -77.5840] }
         ];
 
-        // 3. Simulación de Buses activos en tiempo real con su información de viaje
+        // 3. Más buses activos con puntos de inicio y final para su simulación de movimiento
         const activeBuses = [
             {
                 id: "Bus-101",
                 route: "R1 Centro – Las Lajas",
-                coords: [0.8160, -77.5830],
+                coords: [0.8310, -77.5850],
+                start: [0.8310, -77.5850],
+                end: [0.8068, -77.5873],
                 origin: "Terminal de Transportes",
                 destination: "Santuario de Las Lajas",
                 eta: "4 min",
-                color: "#00a884"
+                color: "#00a884",
+                progress: 0.1,
+                speed: 0.005
+            },
+            {
+                id: "Bus-102",
+                route: "R1 Centro – Las Lajas",
+                coords: [0.8200, -77.5840],
+                start: [0.8068, -77.5873],
+                end: [0.8310, -77.5850],
+                origin: "Santuario de Las Lajas",
+                destination: "Terminal de Transportes",
+                eta: "6 min",
+                color: "#00a884",
+                progress: 0.6,
+                speed: 0.004
             },
             {
                 id: "Bus-204",
                 route: "R2 San Vicente – Terminal",
-                coords: [0.8270, -77.5800],
+                coords: [0.8150, -77.5900],
+                start: [0.8150, -77.5900],
+                end: [0.8310, -77.5850],
                 origin: "San Vicente",
                 destination: "Terminal de Transportes",
                 eta: "7 min",
-                color: "#f59e0b"
+                color: "#f59e0b",
+                progress: 0.2,
+                speed: 0.006
+            },
+            {
+                id: "Bus-205",
+                route: "R2 San Vicente – Terminal",
+                coords: [0.8250, -77.5820],
+                start: [0.8310, -77.5850],
+                end: [0.8150, -77.5900],
+                origin: "Terminal de Transportes",
+                destination: "San Vicente",
+                eta: "3 min",
+                color: "#f59e0b",
+                progress: 0.8,
+                speed: 0.005
             },
             {
                 id: "Bus-309",
                 route: "R3 La Victoria – Hospital",
-                coords: [0.8200, -77.5730],
+                coords: [0.8350, -77.5700],
+                start: [0.8350, -77.5700],
+                end: [0.8180, -77.5750],
                 origin: "La Victoria",
                 destination: "Hospital Civil de Ipiales",
                 eta: "3 min",
-                color: "#3b82f6"
+                color: "#3b82f6",
+                progress: 0.3,
+                speed: 0.004
+            },
+            {
+                id: "Bus-312",
+                route: "R3 La Victoria – Hospital",
+                coords: [0.8190, -77.5740],
+                start: [0.8180, -77.5750],
+                end: [0.8350, -77.5700],
+                origin: "Hospital Civil de Ipiales",
+                destination: "La Victoria",
+                eta: "5 min",
+                color: "#3b82f6",
+                progress: 0.5,
+                speed: 0.005
             }
         ];
 
-        // Renderizar los buses en el mapa
-        function renderBuses() {
+        // Guardar las referencias de los marcadores en el mapa para actualizarlos dinámicamente
+        const busMarkers = {};
+
+        function initBuses() {
             busLayerGroup.clearLayers();
             activeBuses.forEach(bus => {
-                // Crear un icono personalizado estilo bus
                 const busIcon = L.divIcon({
                     className: 'custom-bus-icon',
                     html: `<div style="background-color: ${bus.color}; color: white; padding: 5px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 4px;">🚌 ${bus.id.split('-')[1]}</div>`,
@@ -488,25 +539,45 @@
                 });
 
                 const marker = L.marker(bus.coords, { icon: busIcon });
-                
-                // Popup detallado al hacer clic en el bus
                 marker.bindPopup(`
                     <div style="font-size: 0.9rem; line-height: 1.5;">
                         <b style="font-size: 1rem; color: ${bus.color};">🚍 ${bus.route}</b><br>
                         <b>Unidad:</b> ${bus.id}<br>
                         <b>Viene de:</b> ${bus.origin}<br>
                         <b>Destino:</b> ${bus.destination}<br>
-                        <b>⏱️ Tiempo estimado:</b> <span style="color: #00df9a; font-weight: bold;">${bus.eta} al siguiente paradero</span>
+                        <b>⏱️ Tiempo estimado:</b> <span style="color: #00df9a; font-weight: bold;">${bus.eta}</span>
                     </div>
                 `);
 
                 busLayerGroup.addLayer(marker);
+                busMarkers[bus.id] = marker;
             });
         }
 
-        renderBuses();
+        initBuses();
 
-        // 4. Lógica de Autocompletado para Inputs
+        // 4. Bucle de animación para mover los buses de forma fluida por la ciudad
+        setInterval(() => {
+            activeBuses.forEach(bus => {
+                // Incrementar progreso
+                bus.progress += bus.speed;
+                if (bus.progress >= 1 || bus.progress <= 0) {
+                    bus.speed = -bus.speed; // Revertir dirección al llegar al destino
+                }
+
+                // Interpolación lineal entre start y end
+                const lat = bus.start[0] + (bus.end[0] - bus.start[0]) * bus.progress;
+                const lng = bus.start[1] + (bus.end[1] - bus.start[1]) * bus.progress;
+                bus.coords = [lat, lng];
+
+                // Actualizar posición del marcador en Leaflet
+                if (busMarkers[bus.id]) {
+                    busMarkers[bus.id].setLatLng(bus.coords);
+                }
+            });
+        }, 1000);
+
+        // 5. Lógica de Autocompletado para Inputs
         function setupAutocomplete(inputElement, suggestionsElement) {
             inputElement.addEventListener('input', function() {
                 const query = this.value.toLowerCase().trim();
@@ -538,7 +609,6 @@
                 }
             });
 
-            // Ocultar sugerencias al hacer clic fuera
             document.addEventListener('click', function(e) {
                 if (!inputElement.contains(e.target) && !suggestionsElement.contains(e.target)) {
                     suggestionsElement.style.display = 'none';
@@ -549,7 +619,7 @@
         setupAutocomplete(document.getElementById('origin-input'), document.getElementById('origin-suggestions'));
         setupAutocomplete(document.getElementById('destination-input'), document.getElementById('destination-suggestions'));
 
-        // 5. Lógica de Trazado de Ruta al Buscar
+        // 6. Lógica de Trazado de Ruta al Buscar
         document.getElementById('search-btn').addEventListener('click', function() {
             const originInput = document.getElementById('origin-input');
             const destInput = document.getElementById('destination-input');
@@ -562,14 +632,12 @@
             routeLayerGroup.clearLayers();
 
             if (!isNaN(lat1) && !isNaN(lng1) && !isNaN(lat2) && !isNaN(lng2)) {
-                // Dibujar línea de ruta directa estimada
                 const polyline = L.polyline([[lat1, lng1], [lat2, lng2]], {
                     color: '#00df9a',
                     weight: 5,
                     opacity: 0.8
                 }).addTo(routeLayerGroup);
 
-                // Ajustar el zoom del mapa para abarcar origen y destino
                 map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
             } else {
                 alert("Por favor selecciona un origen y un destino válidos de las sugerencias.");
