@@ -139,7 +139,7 @@
       <div class="absolute bottom-3 left-3 z-[1000] bg-panel/95 border border-line shadow-md rounded-lg px-3 py-2 text-[11px] text-muted max-w-[210px] space-y-1">
         <div class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full border-2 border-ink bg-white"></span> Punto de referencia</div>
         <div class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-full border-2" style="border-color:#D9A441"></span> Paradero de ruta</div>
-        <div class="pt-1 border-t border-line/70">Trazados ilustrativos, no exactos calle a calle.</div>
+        <div class="pt-1 border-t border-line/70">Paraderos en lugares reales; tramos entre ellos son ilustrativos, no exactos calle a calle.</div>
       </div>
     </div>
 
@@ -171,6 +171,13 @@
    INICIALIZACIÓN DEL MAPA
    Leaflet + OpenStreetMap estándar. No usa Google Maps, Mapbox,
    CartoDB ni ningún proveedor que requiera API key o registro.
+
+   Nota geográfica: el punto [0.8258, -77.5828] queda cerca del
+   corredor hacia el Santuario de Las Lajas, ~7 km al oriente del
+   centro histórico real de Ipiales (Parque 20 de Julio, aprox.
+   0.8234, -77.6344). Se usa como vista inicial porque así se pidió;
+   el mapa ajusta automáticamente el encuadre a todas las rutas
+   mediante fitBounds() justo después de cargarlas.
    ============================================================ */
 var map = L.map('map').setView([0.8258, -77.5828], 14);
 
@@ -181,36 +188,44 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 /* ============================================================
    DATOS DE RUTAS Y PUNTOS DE REFERENCIA
-   Coordenadas aproximadas de Ipiales, Nariño. Trazados simulados
-   con fines demostrativos.
+   Coordenadas verificadas de lugares reales de Ipiales, Nariño
+   (Terminal, Parque 20 de Julio, Plaza de Mercado, Rumichaca,
+   Pupiales, Aldana, etc.). Los tramos de calle intermedios entre
+   paraderos son trazados ilustrativos, no rutas oficiales de calle
+   a calle del operador de transporte.
    ============================================================ */
 
 // Puntos de referencia visibles siempre en el mapa, independientes de las rutas.
 var landmarks = [
   {
-    name: 'Terminal de Transportes',
-    lat: 0.8371, lng: -77.6362,
-    desc: 'Conexión con buses intermunicipales e interdepartamentales.',
+    name: 'Terminal de Transportes de Ipiales',
+    lat: 0.827008, lng: -77.6311936,
+    desc: 'Terminal terrestre de pasajeros: conexión con rutas intermunicipales e interdepartamentales.',
   },
   {
-    name: 'Parque 20 de Julio',
-    lat: 0.8398, lng: -77.6458,
-    desc: 'Plaza barrial al norte de la ciudad, cerca a la Ciudadela.',
+    name: 'Parque 20 de Julio (Centro)',
+    lat: 0.8234239, lng: -77.6344089,
+    desc: 'Plaza principal e histórica de Ipiales, junto a la Catedral San Pedro Mártir.',
   },
   {
-    name: 'Barrio San Felipe',
-    lat: 0.8215, lng: -77.6485,
-    desc: 'Sector residencial al suroccidente del centro histórico.',
+    name: 'Plaza de Mercado "Ipiales son Todos"',
+    lat: 0.8245465, lng: -77.6262679,
+    desc: 'Mercado central de abastos de la ciudad, zona comercial concurrida.',
   },
   {
-    name: 'Salida a Rumichaca (Frontera)',
-    lat: 0.7995, lng: -77.6675,
-    desc: 'Vía Panamericana hacia el puente internacional con Ecuador.',
+    name: 'Puente Internacional de Rumichaca',
+    lat: 0.8140214, lng: -77.6640507,
+    desc: 'Frontera con Ecuador sobre el río Guáitara, a pocos minutos del centro.',
   },
   {
-    name: 'Parque La Independencia (Centro)',
-    lat: 0.8299, lng: -77.6428,
-    desc: 'Plaza principal del centro histórico de Ipiales.',
+    name: 'Pupiales (salida norte, vía Pasto)',
+    lat: 0.8691498, lng: -77.6382228,
+    desc: 'Municipio vecino al norte de Ipiales, sobre la Panamericana hacia Pasto.',
+  },
+  {
+    name: 'Aldana (municipio vecino, occidente)',
+    lat: 0.882544, lng: -77.700425,
+    desc: 'Municipio vecino al occidente de Ipiales, conexión intermunicipal cercana.',
   },
 ];
 
@@ -218,100 +233,79 @@ var routes = [
   {
     id: 'r1',
     short: 'R1',
-    name: 'Centro — Terminal',
-    from: 'Parque La Independencia',
-    to: 'Terminal de Transportes',
-    color: '#D9A441',
+    name: 'Terminal — Centro — Barrios del Norte',
+    from: 'Terminal de Transportes',
+    to: 'Salida Norte (vía Pupiales / Pasto)',
+    color: '#2F6FED', // Línea Azul
     frequency: '8 – 10 min',
     hours: '5:30 a. m. – 9:30 p. m.',
     fare: '$2.600 COP',
-    duration: '≈ 18 min',
-    description: 'Conecta el centro histórico con la Terminal de Transportes, pasando por la zona comercial y el Coliseo Municipal.',
+    duration: '≈ 20 min',
+    description: 'Conecta la Terminal de Transportes con el centro histórico y sube hacia los barrios del norte de la ciudad, en dirección a la salida hacia Pupiales y Pasto.',
     stops: [
-      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428, main: true },
-      { name: 'Carrera 6 con Calle 14', lat: 0.8318, lng: -77.6410 },
-      { name: 'Coliseo Municipal', lat: 0.8330, lng: -77.6390 },
-      { name: 'Av. Panamericana / Barrio San Pedro', lat: 0.8350, lng: -77.6375 },
-      { name: 'Terminal de Transportes', lat: 0.8371, lng: -77.6362, main: true },
+      { name: 'Terminal de Transportes', lat: 0.827008, lng: -77.6311936, main: true },
+      { name: 'Parque 20 de Julio (Centro)', lat: 0.8234239, lng: -77.6344089 },
+      { name: 'Parque San Felipe', lat: 0.8287276, lng: -77.6424103 },
+      { name: 'Barrio San Vicente', lat: 0.830804, lng: -77.643439 },
+      { name: 'Salida Norte (vía Pupiales / Pasto)', lat: 0.8480, lng: -77.6390, main: true },
     ],
   },
   {
     id: 'r2',
     short: 'R2',
-    name: 'Centro — Rumichaca',
-    from: 'Parque La Independencia',
+    name: 'Plaza de Mercado — Centro — Rumichaca',
+    from: 'Plaza de Mercado',
     to: 'Puente Internacional de Rumichaca',
-    color: '#C1502E',
+    color: '#1F8A5E', // Línea Verde
     frequency: '12 – 15 min',
     hours: '5:00 a. m. – 8:30 p. m.',
     fare: '$3.200 COP',
     duration: '≈ 25 min',
-    description: 'Ruta de salida sur hacia la frontera con Ecuador, ideal para pasajeros con destino al puente de Rumichaca.',
+    description: 'Une la Plaza de Mercado y el centro comercial con la salida sur hacia la frontera, terminando en el Puente Internacional de Rumichaca.',
     stops: [
-      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428, main: true },
-      { name: 'Av. Colombia', lat: 0.8230, lng: -77.6470 },
-      { name: 'Barrio Emaús', lat: 0.8140, lng: -77.6560 },
-      { name: 'Peaje Panamericana Sur', lat: 0.8055, lng: -77.6620 },
-      { name: 'Puente de Rumichaca', lat: 0.7995, lng: -77.6675, main: true },
+      { name: 'Plaza de Mercado', lat: 0.8245465, lng: -77.6262679, main: true },
+      { name: 'Parque 20 de Julio (Centro)', lat: 0.8234239, lng: -77.6344089 },
+      { name: 'Vía Panamericana Sur', lat: 0.8180, lng: -77.6480 },
+      { name: 'Puente Internacional de Rumichaca', lat: 0.8140214, lng: -77.6640507, main: true },
     ],
   },
   {
     id: 'r3',
     short: 'R3',
-    name: 'Centro — Las Lajas',
-    from: 'Parque La Independencia',
-    to: 'Santuario de Las Lajas',
-    color: '#1F7A6C',
-    frequency: '20 – 25 min',
+    name: 'Centro — Sector Occidental — Aldana',
+    from: 'Parque 20 de Julio (Centro)',
+    to: 'Aldana (municipio vecino)',
+    color: '#E2761D', // Línea Naranja
+    frequency: '25 – 30 min',
     hours: '6:00 a. m. – 7:00 p. m.',
-    fare: '$4.000 COP',
-    duration: '≈ 35 min',
-    description: 'Ruta turística y de peregrinación hacia el Santuario de Las Lajas, con parada en el mirador de la vía.',
+    fare: '$4.500 COP',
+    duration: '≈ 40 min',
+    description: 'Ruta periférica que conecta el centro con el sector occidental de la ciudad y ofrece conexión intermunicipal hacia Aldana.',
     stops: [
-      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428, main: true },
-      { name: 'Barrio Las Cuadras', lat: 0.8225, lng: -77.6280 },
-      { name: 'Vereda Miraflores', lat: 0.8140, lng: -77.6060 },
-      { name: 'Mirador Las Lajas', lat: 0.8075, lng: -77.5930 },
-      { name: 'Santuario de Las Lajas', lat: 0.8043, lng: -77.5859, main: true },
+      { name: 'Parque 20 de Julio (Centro)', lat: 0.8234239, lng: -77.6344089, main: true },
+      { name: 'Barrio San Vicente', lat: 0.830804, lng: -77.643439 },
+      { name: 'Coliseo Cubierto Á. G. Villacís Coral', lat: 0.831174, lng: -77.6513233 },
+      { name: 'Urbanización Nueva Castilla', lat: 0.8259946, lng: -77.6563229 },
+      { name: 'Aldana (municipio vecino)', lat: 0.882544, lng: -77.700425, main: true },
     ],
   },
   {
     id: 'r4',
     short: 'R4',
-    name: 'Ciudadela — Hospital',
-    from: 'Ciudadela Norte',
-    to: 'Hospital Civil',
-    color: '#3B6EA8',
-    frequency: '10 – 12 min',
-    hours: '5:15 a. m. – 9:00 p. m.',
-    fare: '$2.600 COP',
+    name: 'Centro — Santuario de Las Lajas',
+    from: 'Parque 20 de Julio (Centro)',
+    to: 'Santuario de Las Lajas',
+    color: '#7A2FE0', // Línea Morada (ruta turística adicional)
+    frequency: '20 – 25 min',
+    hours: '6:00 a. m. – 6:30 p. m.',
+    fare: '$4.000 COP',
     duration: '≈ 20 min',
-    description: 'Conecta los barrios del norte con el centro y el Hospital Civil, útil para citas médicas y trámites.',
+    description: 'Ruta turística y de peregrinación hacia el Santuario de Nuestra Señora de Las Lajas, uno de los principales destinos religiosos de Colombia.',
     stops: [
-      { name: 'Ciudadela Norte', lat: 0.8455, lng: -77.6455, main: true },
-      { name: 'Barrio Obonuco Vía', lat: 0.8400, lng: -77.6440 },
-      { name: 'Calle 18 Comercial', lat: 0.8350, lng: -77.6420 },
-      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428 },
-      { name: 'Hospital Civil', lat: 0.8265, lng: -77.6395, main: true },
-    ],
-  },
-  {
-    id: 'r5',
-    short: 'R5',
-    name: 'San Pedro — Universidad',
-    from: 'Barrio San Pedro',
-    to: 'Sede Universitaria',
-    color: '#7A8A4B',
-    frequency: '15 – 18 min',
-    hours: '6:00 a. m. – 8:00 p. m.',
-    fare: '$2.600 COP',
-    duration: '≈ 15 min',
-    description: 'Ruta corta que enlaza el barrio San Pedro con la zona universitaria y el sector de Bomboná.',
-    stops: [
-      { name: 'Barrio San Pedro', lat: 0.8180, lng: -77.6300, main: true },
-      { name: 'Sector Bomboná', lat: 0.8230, lng: -77.6360 },
-      { name: 'Parque La Independencia', lat: 0.8299, lng: -77.6428 },
-      { name: 'Sede Universitaria', lat: 0.8330, lng: -77.6480, main: true },
+      { name: 'Parque 20 de Julio (Centro)', lat: 0.8234239, lng: -77.6344089, main: true },
+      { name: 'Universidad de Nariño (sede Ipiales)', lat: 0.8223019, lng: -77.6253102 },
+      { name: 'Mirador Vía Las Lajas', lat: 0.8100, lng: -77.6000 },
+      { name: 'Santuario de Las Lajas', lat: 0.8054536, lng: -77.5858583, main: true },
     ],
   },
 ];
