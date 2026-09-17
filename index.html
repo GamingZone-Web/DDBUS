@@ -136,6 +136,14 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
 .offline{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1050;background:rgba(21,36,48,.96);border:1px solid var(--line);border-radius:12px;padding:14px 18px;max-width:330px;font-size:13px;color:var(--ink-2);display:none}
 .offline strong{color:var(--ink);display:block;margin-bottom:4px}
 .stopdot{background:var(--teal);border:3px solid #06231f;border-radius:50%;box-shadow:0 0 0 2px var(--teal)}
+.busicon{display:grid;place-items:center;border-radius:50%;border:3px solid #0B151B;box-shadow:0 3px 8px rgba(0,0,0,.5);font-size:15px;transition:transform .25s linear}
+.busicon.live{animation:pulso 1.8s ease-in-out infinite}
+@keyframes pulso{0%,100%{box-shadow:0 3px 8px rgba(0,0,0,.5),0 0 0 0 rgba(255,255,255,.35)}50%{box-shadow:0 3px 8px rgba(0,0,0,.5),0 0 0 6px rgba(255,255,255,0)}}
+.bus-pop b{color:#EEF3F2}
+.bus-pop .bp-ruta{display:inline-flex;align-items:center;gap:6px;font-family:var(--narrow);font-weight:700;margin-bottom:4px}
+.bus-pop .bp-line{width:10px;height:10px;border-radius:3px;flex:none}
+.bus-pop .bp-track{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);margin:4px 0}
+.bus-pop .bp-eta{display:inline-block;margin-top:5px;background:var(--teal-soft);color:var(--teal);font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 @media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.mapwrap{height:62dvh}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -226,6 +234,7 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
     <div id="map"></div>
     <div class="layers">
       <label><input type="checkbox" checked data-layer="rutas"> Trazado de rutas</label>
+      <label><input type="checkbox" checked data-layer="buses"> Buses en vivo</label>
       <label><input type="checkbox" checked data-layer="paraderos"> Paraderos</label>
       <label><input type="checkbox" checked data-layer="refs"> Puntos de referencia</label>
       <label><input type="checkbox" checked data-layer="base"> Cartografía base</label>
@@ -268,6 +277,16 @@ const REFS=[
  {n:"Catedral de Ipiales",ll:[0.8272,-77.6443]},{n:"Alcaldía Municipal",ll:[0.8262,-77.6455]},
  {n:"Estadio Municipal",ll:[0.8224,-77.6402]},{n:"Puente Internacional de Rumichaca",ll:[0.8118,-77.6664]}
 ];
+
+/* ---- Buses activos (mock) ---- */
+/* pos: fracción 0–1 recorrida sobre RUTAS[ruta].coords · vel: fracción/seg (simulada) */
+const BUSES=[
+ {id:"BUS-104",ruta:"R1",origen:"Terminal de Transportes",destino:"Santuario de Las Lajas",pos:.18,vel:.006,eta:9},
+ {id:"BUS-212",ruta:"R2",origen:"Barrio San Vicente",destino:"Terminal de Transportes",pos:.62,vel:.008,eta:4},
+ {id:"BUS-087",ruta:"R3",origen:"La Victoria",destino:"Hospital Civil",pos:.35,vel:.007,eta:6},
+ {id:"BUS-301",ruta:"R2",origen:"Terminal de Transportes",destino:"Barrio San Vicente",pos:.85,vel:.005,eta:2}
+];
+
 
 /* =================== BASE LOCAL DE LUGARES (mock) =================== */
 /* Alimenta el buscador predictivo de origen/destino. Sustituir por datos oficiales cuando existan. */
@@ -364,7 +383,7 @@ const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom
 base.on("tileerror",()=>document.getElementById("offline").style.display="block");
 base.addTo(map);
 
-const capas={rutas:L.layerGroup().addTo(map),paraderos:L.layerGroup().addTo(map),refs:L.layerGroup().addTo(map)};
+const capas={rutas:L.layerGroup().addTo(map),paraderos:L.layerGroup().addTo(map),refs:L.layerGroup().addTo(map),buses:L.layerGroup().addTo(map)};
 const trazos={};
 RUTAS.forEach(r=>{
   trazos[r.id]=L.polyline(r.coords,{color:r.color,weight:5,opacity:r.op?.95:.4,dashArray:r.op?null:"8 8"})
@@ -375,6 +394,45 @@ PARADEROS.forEach(s=>{
    .bindPopup(`<strong>${s.c}</strong> ${s.n}<br>${s.s} · ${s.t?"Techado":"Señal sencilla"}<br>Rutas ${s.r.join(", ")}`)
    .on("click",()=>resaltar(s.r)).addTo(capas.paraderos);
 });
+
+/* ---------- Buses en tiempo real ---------- */
+function puntoEnRuta(coords,frac){
+  // Interpola linealmente sobre los segmentos de la polilínea según una fracción 0–1
+  const segs=coords.length-1,total=frac*segs,i=Math.min(Math.floor(total),segs-1),t=total-i;
+  const [a,b]=[coords[i],coords[i+1]];
+  return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+}
+function iconoBus(color){
+  return L.divIcon({className:"busicon live",html:`<div class="busicon live" style="width:30px;height:30px;background:${color}">🚌</div>`,iconSize:[30,30],iconAnchor:[15,15]});
+}
+function popupBus(b){
+  const r=RUTAS.find(x=>x.id===b.ruta);
+  return `<div class="bus-pop">
+    <div class="bp-ruta"><span class="bp-line" style="background:${r.color}"></span>${b.id} · ${r.id} ${r.nom}</div>
+    <div class="bp-track">📍 Ubicación actual: en tránsito por ${r.nom}</div>
+    <div class="bp-track">↪ Viene de: <b>${b.origen}</b></div>
+    <div class="bp-track">➔ Destino: <b>${b.destino}</b></div>
+    <span class="bp-eta">Tiempo estimado: ${b.eta} min</span>
+  </div>`;
+}
+BUSES.forEach(b=>{
+  const r=RUTAS.find(x=>x.id===b.ruta);
+  b.marker=L.marker(puntoEnRuta(r.coords,b.pos),{icon:iconoBus(r.color),title:b.id,zIndexOffset:1000})
+    .bindPopup(popupBus(b),{className:"bus-popup"})
+    .addTo(capas.buses);
+});
+// Simulación de movimiento: avanza cada bus sobre su ruta y recalcula el ETA
+setInterval(()=>{
+  BUSES.forEach(b=>{
+    const r=RUTAS.find(x=>x.id===b.ruta);
+    b.pos+=b.vel;
+    if(b.pos>=1){b.pos=0;[b.origen,b.destino]=[b.destino,b.origen]} // llega y reinicia en sentido contrario
+    b.eta=Math.max(1,Math.round((1-b.pos)*15));
+    b.marker.setLatLng(puntoEnRuta(r.coords,b.pos));
+    if(b.marker.isPopupOpen())b.marker.setPopupContent(popupBus(b));
+  });
+},1200);
+
 REFS.forEach(f=>{
   L.circleMarker(f.ll,{radius:6,color:"#EEF3F2",weight:2,fillColor:"#0B151B",fillOpacity:.85})
    .bindTooltip(f.n,{direction:"right"}).addTo(capas.refs);
