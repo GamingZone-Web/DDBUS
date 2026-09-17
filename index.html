@@ -266,6 +266,32 @@
             color: #8696a0;
         }
 
+        /* Listados internos para pestañas Paraderos y Rutas */
+        .list-card {
+            background-color: #162229;
+            border: 1px solid #222d34;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .list-card:hover {
+            border-color: #00df9a;
+        }
+
+        .list-card h4 {
+            font-size: 0.95rem;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .list-card p {
+            font-size: 0.8rem;
+            color: #8696a0;
+        }
+
         /* Área de Mapa (Derecha) */
         .map-container {
             flex: 1;
@@ -342,54 +368,15 @@
         <!-- Panel Izquierdo -->
         <div class="sidebar">
             <div class="tabs">
-                <button class="tab active">Planea tu viaje</button>
-                <button class="tab">Paraderos</button>
-                <button class="tab">Rutas</button>
-                <button class="tab">Tutorial</button>
-                <button class="tab">Seguridad</button>
+                <button class="tab active" data-tab="planea">Planea tu viaje</button>
+                <button class="tab" data-tab="paraderos">Paraderos</button>
+                <button class="tab" data-tab="rutas">Rutas</button>
+                <button class="tab" data-tab="tutorial">Tutorial</button>
+                <button class="tab" data-tab="seguridad">Seguridad</button>
             </div>
 
-            <div class="tab-content">
-                <div class="panel-title">Planea tu viaje</div>
-                <div class="panel-desc">Elige desde dónde sales y a dónde vas en Ipiales. Te mostramos las rutas que te sirven.</div>
-
-                <div class="input-group">
-                    <div class="input-icon icon-a">A</div>
-                    <input type="text" id="origin-input" placeholder="Selecciona un punto de origen o paradero" autocomplete="off">
-                    <div id="origin-suggestions" class="suggestions-list"></div>
-                </div>
-
-                <div class="input-group">
-                    <div class="input-icon icon-b">B</div>
-                    <input type="text" id="destination-input" placeholder="¿Cuál es tu destino?" autocomplete="off">
-                    <div id="destination-suggestions" class="suggestions-list"></div>
-                </div>
-
-                <button class="btn-search" id="search-btn">Buscar rutas</button>
-
-                <div class="step-guide">
-                    <div class="step-item">
-                        <div class="step-number">1</div>
-                        <div class="step-text">
-                            <h4>Selecciona el punto de origen</h4>
-                            <p>Escríbelo o toca un paradero directamente en el mapa.</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">2</div>
-                        <div class="step-text">
-                            <h4>Selecciona el punto de destino</h4>
-                            <p>Puedes usar un punto de referencia clave de la ciudad.</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">3</div>
-                        <div class="step-text">
-                            <h4>Presiona búsqueda</h4>
-                            <p>Verás las rutas, paraderos y el trazado detallado en el mapa.</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="tab-content" id="tab-content-container">
+                <!-- Se inyectará dinámicamente según la pestaña activa -->
             </div>
         </div>
 
@@ -430,102 +417,35 @@
 
         let routeLayerGroup = L.layerGroup().addTo(map);
         let busLayerGroup = L.layerGroup().addTo(map);
+        let stopLayerGroup = L.layerGroup().addTo(map);
 
         // 2. Base de datos local de paraderos y puntos de referencia en Ipiales
         const locationsDB = [
-            { name: "Terminal de Transportes Ipiales", coords: [0.8310, -77.5850] },
-            { name: "Parque 20 de Julio (Centro)", coords: [0.8235, -77.5812] },
-            { name: "Hospital Civil de Ipiales", coords: [0.8180, -77.5750] },
-            { name: "San Vicente", coords: [0.8150, -77.5900] },
-            { name: "La Victoria", coords: [0.8350, -77.5700] },
-            { name: "Santuario de Las Lajas", coords: [0.8068, -77.5873] },
-            { name: "Centro Comercial Ipiales Plaza", coords: [0.8280, -77.5780] },
-            { name: "Plaza de Mercado", coords: [0.8210, -77.5840] }
+            { name: "Terminal de Transportes Ipiales", coords: [0.8310, -77.5850], desc: "Principal punto de llegada y salida intermunicipal e internacional." },
+            { name: "Parque 20 de Julio (Centro)", coords: [0.8235, -77.5812], desc: "Corazón comercial y de transbordo urbano." },
+            { name: "Hospital Civil de Ipiales", coords: [0.8180, -77.5750], desc: "Zona de alta afluencia médica y asistencial." },
+            { name: "San Vicente", coords: [0.8150, -77.5900], desc: "Sector residencial y comercial del occidente." },
+            { name: "La Victoria", coords: [0.8350, -77.5700], desc: "Barrio residencial del norte de la ciudad." },
+            { name: "Santuario de Las Lajas", coords: [0.8068, -77.5873], desc: "Destino turístico emblemático mundial." },
+            { name: "Centro Comercial Ipiales Plaza", coords: [0.8280, -77.5780], desc: "Zona comercial moderna." },
+            { name: "Plaza de Mercado", coords: [0.8210, -77.5840], desc: "Abastecimiento principal de la ciudad." }
         ];
 
-        // 3. Más buses activos con puntos de inicio y final para su simulación de movimiento
+        // 3. Rutas predefinidas
+        const routesDB = [
+            { id: "R1", name: "R1 Centro – Las Lajas", color: "#00a884", details: "Sale desde la Terminal, pasa por el Parque 20 de Julio y desciende hacia el Santuario de Las Lajas." },
+            { id: "R2", name: "R2 San Vicente – Terminal", color: "#f59e0b", details: "Conecta el sector de San Vicente con la Plaza de Mercado y la Terminal de Transportes." },
+            { id: "R3", name: "R3 La Victoria – Hospital", color: "#3b82f6", details: "Recorre desde La Victoria en el norte, cruzando el centro hasta el Hospital Civil." }
+        ];
+
+        // 4. Buses activos
         const activeBuses = [
-            {
-                id: "Bus-101",
-                route: "R1 Centro – Las Lajas",
-                coords: [0.8310, -77.5850],
-                start: [0.8310, -77.5850],
-                end: [0.8068, -77.5873],
-                origin: "Terminal de Transportes",
-                destination: "Santuario de Las Lajas",
-                eta: "4 min",
-                color: "#00a884",
-                progress: 0.1,
-                speed: 0.005
-            },
-            {
-                id: "Bus-102",
-                route: "R1 Centro – Las Lajas",
-                coords: [0.8200, -77.5840],
-                start: [0.8068, -77.5873],
-                end: [0.8310, -77.5850],
-                origin: "Santuario de Las Lajas",
-                destination: "Terminal de Transportes",
-                eta: "6 min",
-                color: "#00a884",
-                progress: 0.6,
-                speed: 0.004
-            },
-            {
-                id: "Bus-204",
-                route: "R2 San Vicente – Terminal",
-                coords: [0.8150, -77.5900],
-                start: [0.8150, -77.5900],
-                end: [0.8310, -77.5850],
-                origin: "San Vicente",
-                destination: "Terminal de Transportes",
-                eta: "7 min",
-                color: "#f59e0b",
-                progress: 0.2,
-                speed: 0.006
-            },
-            {
-                id: "Bus-205",
-                route: "R2 San Vicente – Terminal",
-                coords: [0.8250, -77.5820],
-                start: [0.8310, -77.5850],
-                end: [0.8150, -77.5900],
-                origin: "Terminal de Transportes",
-                destination: "San Vicente",
-                eta: "3 min",
-                color: "#f59e0b",
-                progress: 0.8,
-                speed: 0.005
-            },
-            {
-                id: "Bus-309",
-                route: "R3 La Victoria – Hospital",
-                coords: [0.8350, -77.5700],
-                start: [0.8350, -77.5700],
-                end: [0.8180, -77.5750],
-                origin: "La Victoria",
-                destination: "Hospital Civil de Ipiales",
-                eta: "3 min",
-                color: "#3b82f6",
-                progress: 0.3,
-                speed: 0.004
-            },
-            {
-                id: "Bus-312",
-                route: "R3 La Victoria – Hospital",
-                coords: [0.8190, -77.5740],
-                start: [0.8180, -77.5750],
-                end: [0.8350, -77.5700],
-                origin: "Hospital Civil de Ipiales",
-                destination: "La Victoria",
-                eta: "5 min",
-                color: "#3b82f6",
-                progress: 0.5,
-                speed: 0.005
-            }
+            { id: "Bus-101", route: "R1 Centro – Las Lajas", coords: [0.8310, -77.5850], start: [0.8310, -77.5850], end: [0.8068, -77.5873], origin: "Terminal de Transportes", destination: "Santuario de Las Lajas", eta: "4 min", color: "#00a884", progress: 0.1, speed: 0.005 },
+            { id: "Bus-102", route: "R1 Centro – Las Lajas", coords: [0.8200, -77.5840], start: [0.8068, -77.5873], end: [0.8310, -77.5850], origin: "Santuario de Las Lajas", destination: "Terminal de Transportes", eta: "6 min", color: "#00a884", progress: 0.6, speed: 0.004 },
+            { id: "Bus-204", route: "R2 San Vicente – Terminal", coords: [0.8150, -77.5900], start: [0.8150, -77.5900], end: [0.8310, -77.5850], origin: "San Vicente", destination: "Terminal de Transportes", eta: "7 min", color: "#f59e0b", progress: 0.2, speed: 0.006 },
+            { id: "Bus-309", route: "R3 La Victoria – Hospital", coords: [0.8350, -77.5700], start: [0.8350, -77.5700], end: [0.8180, -77.5750], origin: "La Victoria", destination: "Hospital Civil de Ipiales", eta: "3 min", color: "#3b82f6", progress: 0.3, speed: 0.004 }
         ];
 
-        // Guardar las referencias de los marcadores en el mapa para actualizarlos dinámicamente
         const busMarkers = {};
 
         function initBuses() {
@@ -556,28 +476,204 @@
 
         initBuses();
 
-        // 4. Bucle de animación para mover los buses de forma fluida por la ciudad
+        // Animación de buses
         setInterval(() => {
             activeBuses.forEach(bus => {
-                // Incrementar progreso
                 bus.progress += bus.speed;
                 if (bus.progress >= 1 || bus.progress <= 0) {
-                    bus.speed = -bus.speed; // Revertir dirección al llegar al destino
+                    bus.speed = -bus.speed;
                 }
-
-                // Interpolación lineal entre start y end
                 const lat = bus.start[0] + (bus.end[0] - bus.start[0]) * bus.progress;
                 const lng = bus.start[1] + (bus.end[1] - bus.start[1]) * bus.progress;
                 bus.coords = [lat, lng];
 
-                // Actualizar posición del marcador en Leaflet
                 if (busMarkers[bus.id]) {
                     busMarkers[bus.id].setLatLng(bus.coords);
                 }
             });
         }, 1000);
 
-        // 5. Lógica de Autocompletado para Inputs
+        // 5. Renderizador de pestañas del menú lateral
+        const tabContentContainer = document.getElementById('tab-content-container');
+        const tabButtons = document.querySelectorAll('.tab');
+
+        function renderTab(tabName) {
+            stopLayerGroup.clearLayers();
+
+            if (tabName === 'planea') {
+                tabContentContainer.innerHTML = `
+                    <div class="panel-title">Planea tu viaje</div>
+                    <div class="panel-desc">Elige desde dónde sales y a dónde vas en Ipiales. Te mostramos las rutas que te sirven.</div>
+
+                    <div class="input-group">
+                        <div class="input-icon icon-a">A</div>
+                        <input type="text" id="origin-input" placeholder="Selecciona un punto de origen o paradero" autocomplete="off">
+                        <div id="origin-suggestions" class="suggestions-list"></div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-icon icon-b">B</div>
+                        <input type="text" id="destination-input" placeholder="¿Cuál es tu destino?" autocomplete="off">
+                        <div id="destination-suggestions" class="suggestions-list"></div>
+                    </div>
+
+                    <button class="btn-search" id="search-btn">Buscar rutas</button>
+
+                    <div class="step-guide">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-text">
+                                <h4>Selecciona el punto de origen</h4>
+                                <p>Escríbelo o toca un paradero directamente en el mapa.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">2</div>
+                            <div class="step-text">
+                                <h4>Selecciona el punto de destino</h4>
+                                <p>Puedes usar un punto de referencia clave de la ciudad.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">3</div>
+                            <div class="step-text">
+                                <h4>Presiona búsqueda</h4>
+                                <p>Verás las rutas, paraderos y el trazado detallado en el mapa.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                setupAutocomplete(document.getElementById('origin-input'), document.getElementById('origin-suggestions'));
+                setupAutocomplete(document.getElementById('destination-input'), document.getElementById('destination-suggestions'));
+
+                document.getElementById('search-btn').addEventListener('click', function() {
+                    const originInput = document.getElementById('origin-input');
+                    const destInput = document.getElementById('destination-input');
+                    const lat1 = parseFloat(originInput.dataset.lat);
+                    const lng1 = parseFloat(originInput.dataset.lng);
+                    const lat2 = parseFloat(destInput.dataset.lat);
+                    const lng2 = parseFloat(destInput.dataset.lng);
+
+                    routeLayerGroup.clearLayers();
+                    if (!isNaN(lat1) && !isNaN(lng1) && !isNaN(lat2) && !isNaN(lng2)) {
+                        const polyline = L.polyline([[lat1, lng1], [lat2, lng2]], {
+                            color: '#00df9a',
+                            weight: 5,
+                            opacity: 0.8
+                        }).addTo(routeLayerGroup);
+                        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+                    } else {
+                        alert("Por favor selecciona un origen y un destino válidos de las sugerencias.");
+                    }
+                });
+
+            } else if (tabName === 'paraderos') {
+                let html = `
+                    <div class="panel-title">Paraderos Principales</div>
+                    <div class="panel-desc">Haz clic en cualquier paradero de la lista para ubicarlo y centrarlo en el mapa de Ipiales.</div>
+                `;
+                locationsDB.forEach(loc => {
+                    html += `
+                        <div class="list-card" onclick="focusLocation(${loc.coords[0]}, ${loc.coords[1]}, '${loc.name}')">
+                            <h4>🚏 ${loc.name}</h4>
+                            <p>${loc.desc}</p>
+                        </div>
+                    `;
+                    // Añadir marcador de paradero al mapa
+                    const stopMarker = L.marker(loc.coords).bindPopup(`<b>🚏 Paradero:</b> ${loc.name}<br>${loc.desc}`);
+                    stopLayerGroup.addLayer(stopMarker);
+                });
+                tabContentContainer.innerHTML = html;
+
+            } else if (tabName === 'rutas') {
+                let html = `
+                    <div class="panel-title">Rutas Urbanas</div>
+                    <div class="panel-desc">Conoce las líneas de transporte operativas y sus trayectos principales.</div>
+                `;
+                routesDB.forEach(route => {
+                    html += `
+                        <div class="list-card" style="border-left: 4px solid ${route.color};">
+                            <h4 style="color: ${route.color};">🚍 ${route.name}</h4>
+                            <p>${route.details}</p>
+                        </div>
+                    `;
+                });
+                tabContentContainer.innerHTML = html;
+
+            } else if (tabName === 'tutorial') {
+                tabContentContainer.innerHTML = `
+                    <div class="panel-title">Guía de Uso</div>
+                    <div class="panel-desc">Aprende a moverte por Ipiales usando DDBUS de forma rápida y sencilla.</div>
+                    <div class="step-guide">
+                        <div class="step-item">
+                            <div class="step-number">i</div>
+                            <div class="step-text">
+                               <h4>Tarifas Oficiales</h4>
+                               <p>El pasaje general urbano cuesta $2.500 COP. Estudiantes y adultos mayores pagan tarifa diferencial de $1.800 COP.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">ii</div>
+                            <div class="step-text">
+                               <h4>Horarios de Servicio</h4>
+                               <p>Las rutas operan ininterrumpidamente de lunes a domingo desde las 5:30 a.m. hasta las 8:30 p.m.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">iii</div>
+                            <div class="step-text">
+                               <h4>Monitoreo GPS</h4>
+                               <p>Los iconos de buses en movimiento simulan la ubicación en tiempo real de las flotas asociadas a las empresas locales.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (tabName === 'seguridad') {
+                tabContentContainer.innerHTML = `
+                    <div class="panel-title">Seguridad y Emergencias</div>
+                    <div class="panel-desc">Números de contacto rápido ante cualquier eventualidad en tu recorrido.</div>
+                    <div class="step-guide">
+                        <div class="step-item">
+                            <div class="step-number" style="background-color: #ea4335; color: white;">🚨</div>
+                            <div class="step-text">
+                                <h4>Policía Nacional (Ipiales)</h4>
+                                <p>Línea de emergencia inmediata: <strong>123</strong></p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number" style="background-color: #f59e0b; color: white;">🏥</div>
+                            <div class="step-text">
+                                <h4>Hospital Civil de Ipiales</h4>
+                                <p>Urgencias y ambulancias: <strong>(602) 773 2000</strong></p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number" style="background-color: #00a884; color: white;">🚍</div>
+                            <div class="step-text">
+                                <h4>Central de Tránsito Municipal</h4>
+                                <p>Reporte de objetos olvidados o quejas en rutas urbanas.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Función para centrar el mapa desde la lista de paraderos
+        window.focusLocation = function(lat, lng, name) {
+            map.setView([lat, lng], 16);
+        };
+
+        // Eventos para cambiar de pestaña
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                renderTab(this.dataset.tab);
+            });
+        });
+
+        // Configurar autocompletado en inputs
         function setupAutocomplete(inputElement, suggestionsElement) {
             inputElement.addEventListener('input', function() {
                 const query = this.value.toLowerCase().trim();
@@ -616,33 +712,8 @@
             });
         }
 
-        setupAutocomplete(document.getElementById('origin-input'), document.getElementById('origin-suggestions'));
-        setupAutocomplete(document.getElementById('destination-input'), document.getElementById('destination-suggestions'));
-
-        // 6. Lógica de Trazado de Ruta al Buscar
-        document.getElementById('search-btn').addEventListener('click', function() {
-            const originInput = document.getElementById('origin-input');
-            const destInput = document.getElementById('destination-input');
-
-            const lat1 = parseFloat(originInput.dataset.lat);
-            const lng1 = parseFloat(originInput.dataset.lng);
-            const lat2 = parseFloat(destInput.dataset.lat);
-            const lng2 = parseFloat(destInput.dataset.lng);
-
-            routeLayerGroup.clearLayers();
-
-            if (!isNaN(lat1) && !isNaN(lng1) && !isNaN(lat2) && !isNaN(lng2)) {
-                const polyline = L.polyline([[lat1, lng1], [lat2, lng2]], {
-                    color: '#00df9a',
-                    weight: 5,
-                    opacity: 0.8
-                }).addTo(routeLayerGroup);
-
-                map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-            } else {
-                alert("Por favor selecciona un origen y un destino válidos de las sugerencias.");
-            }
-        });
+        // Inicializar con la pestaña por defecto activa ("Planea tu viaje")
+        renderTab('planea');
     </script>
 </body>
 </html>
