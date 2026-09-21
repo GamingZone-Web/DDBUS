@@ -128,6 +128,7 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
 .layers{position:absolute;top:12px;left:12px;z-index:1100;background:rgba(21,36,48,.95);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;backdrop-filter:blur(4px)}
 .layers label{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer}
 .layers input{accent-color:var(--teal)}
+.layers-toggle{display:none;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;padding:0}
 .zoomctl{position:absolute;top:12px;right:12px;z-index:1100;display:flex;flex-direction:column;gap:6px}
 .zoomctl button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(21,36,48,.95);font-size:18px;font-weight:600;display:grid;place-items:center}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;padding:9px 12px;background:var(--panel);border-top:1px solid var(--line)}
@@ -145,6 +146,12 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
 .bus-pop .bp-track{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);margin:4px 0}
 .bus-pop .bp-eta{display:inline-block;margin-top:5px;background:var(--teal-soft);color:var(--teal);font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
 @media (max-width:900px){.app{grid-template-columns:1fr;height:auto}.mapwrap{height:62dvh}}
+@media (max-width:600px){
+  .layers{padding:7px 10px;max-width:46vw}
+  .layers-toggle{display:block;font-size:12.5px}
+  .layers-list{display:none;margin-top:8px}
+  .layers.open .layers-list{display:block}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -232,12 +239,15 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
   <!-- ================= MAPA REAL ================= -->
   <section class="mapwrap">
     <div id="map"></div>
-    <div class="layers">
-      <label><input type="checkbox" checked data-layer="rutas"> Trazado de rutas</label>
-      <label><input type="checkbox" checked data-layer="buses"> Buses en vivo</label>
-      <label><input type="checkbox" checked data-layer="paraderos"> Paraderos</label>
-      <label><input type="checkbox" checked data-layer="refs"> Puntos de referencia</label>
-      <label><input type="checkbox" checked data-layer="base"> Cartografía base</label>
+    <div class="layers" id="layers">
+      <button type="button" class="layers-toggle" id="layersToggle" aria-expanded="false" aria-controls="layersList">🗺️ Capas</button>
+      <div class="layers-list" id="layersList">
+        <label><input type="checkbox" checked data-layer="rutas"> Trazado de rutas</label>
+        <label><input type="checkbox" checked data-layer="buses"> Buses en vivo</label>
+        <label><input type="checkbox" checked data-layer="paraderos"> Paraderos</label>
+        <label><input type="checkbox" checked data-layer="refs"> Puntos de referencia</label>
+        <label><input type="checkbox" checked data-layer="base"> Cartografía base</label>
+      </div>
     </div>
     <div class="zoomctl">
       <button id="zin" aria-label="Acercar">+</button>
@@ -319,8 +329,7 @@ const RUTAS=[
   coords:[[0.8398,-77.6382],[0.8321,-77.6281],[0.8296,-77.6330]]}
 ];
 /* r: mapeo PROVISIONAL a las 12 rutas reales según cercanía de coordenadas — falta validar
-   contra el trazado oficial de cada ruta. IP-31 (Aeropuerto) no coincide con ninguna de las
-   12 rutas publicadas por la fuente, así que queda sin ruta asignada. */
+   contra el trazado oficial de cada ruta. */
 const PARADEROS=[
  {c:"IP-01",n:"Parque Principal (Charco)",s:"Sentido norte",t:true,r:["R1","R2","R3","R4","R5","R6","R7","R8","R9","R10"],ll:[0.8268,-77.6449]},
  {c:"IP-04",n:"Plaza de Mercado",s:"Sentido sur",t:false,r:["R4"],ll:[0.8241,-77.6470]},
@@ -328,13 +337,16 @@ const PARADEROS=[
  {c:"IP-12",n:"Hospital Civil",s:"Sentido occidente",t:true,r:["R6"],ll:[0.8196,-77.6541]},
  {c:"IP-18",n:"Av. Panamericana – Colegio",s:"Sentido oriente",t:false,r:["R5","R12"],ll:[0.8296,-77.6330]},
  {c:"IP-23",n:"Santuario de Las Lajas",s:"Ambos sentidos",t:true,r:["R1"],ll:[0.8052,-77.5861]},
- {c:"IP-27",n:"Barrio San Vicente (Balcones)",s:"Sentido norte",t:false,r:["R2","R11","R12"],ll:[0.8398,-77.6382]},
- {c:"IP-31",n:"Aeropuerto San Luis",s:"Sentido oriente",t:true,r:[],ll:[0.8612,-77.6718]}
+ {c:"IP-27",n:"Barrio San Vicente (Balcones)",s:"Sentido norte",t:false,r:["R2","R11","R12"],ll:[0.8398,-77.6382]}
 ];
+/* Ninguna de las 12 rutas oficiales llega al Aeropuerto San Luis, así que queda solo como
+   punto de referencia en el mapa (no como parada con servicio) hasta que haya un dato oficial. */
 const REFS=[
  {n:"Catedral de Ipiales",ll:[0.8272,-77.6443]},{n:"Alcaldía Municipal",ll:[0.8262,-77.6455]},
- {n:"Estadio Municipal",ll:[0.8224,-77.6402]},{n:"Puente Internacional de Rumichaca",ll:[0.8118,-77.6664]}
+ {n:"Estadio Municipal",ll:[0.8224,-77.6402]},{n:"Puente Internacional de Rumichaca",ll:[0.8118,-77.6664]},
+ {n:"Aeropuerto San Luis",ll:[0.8612,-77.6718]}
 ];
+
 
 /* ---- Buses activos (mock) ---- */
 /* pos: fracción 0–1 recorrida sobre RUTAS[ruta].coords · vel: fracción/seg (simulada) */
@@ -348,33 +360,32 @@ const BUSES=[
 
 /* =================== BASE LOCAL DE LUGARES (mock) =================== */
 /* Alimenta el buscador predictivo de origen/destino. Sustituir por datos oficiales cuando existan. */
+/* Cada lugar apunta explícitamente a un código de PARADEROS:
+   - "paradero": el lugar ES esa parada.
+   - "cercano": el lugar no tiene parada propia, pero esta es la más próxima (aproximación,
+     falta validar con datos oficiales). Sin ninguno de los dos = sin servicio de DDBUS hoy. */
 const LUGARES=[
- {n:"Terminal de Transportes",t:"Paradero",ico:"🚏"},
- {n:"Parque Principal / Parque 20 de Julio",t:"Punto de referencia",ico:"📍"},
- {n:"Hospital Civil de Ipiales",t:"Punto de referencia",ico:"🏥"},
- {n:"Santuario de Las Lajas",t:"Punto de referencia",ico:"⛪"},
- {n:"Plaza de Mercado",t:"Paradero",ico:"🚏"},
- {n:"San Vicente",t:"Barrio",ico:"🏘️"},
- {n:"La Victoria",t:"Barrio",ico:"🏘️"},
- {n:"Altos de Chapaliko",t:"Barrio",ico:"🏘️"},
- {n:"Barrio Obrero",t:"Barrio",ico:"🏘️"},
- {n:"Barrio Panamericano",t:"Barrio",ico:"🏘️"},
- {n:"Ciudadela Maridiaz",t:"Barrio",ico:"🏘️"},
- {n:"Puente Internacional de Rumichaca",t:"Punto de referencia",ico:"🌉"},
+ {n:"Terminal de Transportes",t:"Paradero",ico:"🚏",paradero:"IP-07"},
+ {n:"Parque Principal / Parque 20 de Julio (Charco)",t:"Paradero",ico:"🚏",paradero:"IP-01"},
+ {n:"Hospital Civil de Ipiales",t:"Paradero",ico:"🏥",paradero:"IP-12"},
+ {n:"Santuario de Las Lajas",t:"Paradero",ico:"⛪",paradero:"IP-23"},
+ {n:"Plaza de Mercado",t:"Paradero",ico:"🚏",paradero:"IP-04"},
+ {n:"San Vicente (Balcones)",t:"Barrio",ico:"🏘️",paradero:"IP-27"},
+ {n:"La Victoria",t:"Barrio",ico:"🏘️",cercano:"IP-01"},
+ {n:"Altos de Chapaliko",t:"Barrio",ico:"🏘️",cercano:"IP-01"},
+ {n:"Barrio Obrero",t:"Barrio",ico:"🏘️",cercano:"IP-01"},
+ {n:"Barrio Panamericano",t:"Barrio",ico:"🏘️",cercano:"IP-18"},
+ {n:"Ciudadela Maridiaz",t:"Barrio",ico:"🏘️",cercano:"IP-01"},
+ {n:"Puente Internacional de Rumichaca",t:"Punto de referencia",ico:"🌉",cercano:"IP-07"},
  {n:"Aeropuerto San Luis",t:"Punto de referencia",ico:"✈️"},
- {n:"Estadio Municipal",t:"Punto de referencia",ico:"🏟️"},
- {n:"Alcaldía Municipal de Ipiales",t:"Punto de referencia",ico:"🏛️"},
- {n:"Catedral de Ipiales",t:"Punto de referencia",ico:"⛪"},
- {n:"Universidad de Nariño – sede Ipiales",t:"Punto de referencia",ico:"🎓"},
- {n:"Colegio Ciudad de Ipiales",t:"Punto de referencia",ico:"🏫"},
- {n:"Barrio Champagnat",t:"Barrio",ico:"🏘️"},
- {n:"Barrio Cristo Rey",t:"Barrio",ico:"🏘️"},
- {n:"Barrio El Rosal",t:"Barrio",ico:"🏘️"},
- {n:"Paradero IP-01 · Parque Principal",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-07 · Terminal",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-12 · Hospital Civil",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-23 · Las Lajas",t:"Paradero",ico:"🚏"},
- {n:"Paradero IP-27 · San Vicente",t:"Paradero",ico:"🚏"}
+ {n:"Estadio Municipal",t:"Punto de referencia",ico:"🏟️",cercano:"IP-01"},
+ {n:"Alcaldía Municipal de Ipiales",t:"Punto de referencia",ico:"🏛️",cercano:"IP-01"},
+ {n:"Catedral de Ipiales",t:"Punto de referencia",ico:"⛪",cercano:"IP-01"},
+ {n:"Universidad de Nariño – sede Ipiales",t:"Punto de referencia",ico:"🎓",cercano:"IP-01"},
+ {n:"Colegio Ciudad de Ipiales",t:"Punto de referencia",ico:"🏫",cercano:"IP-01"},
+ {n:"Barrio Champagnat",t:"Barrio",ico:"🏘️",cercano:"IP-01"},
+ {n:"Barrio Cristo Rey",t:"Barrio",ico:"🏘️",cercano:"IP-01"},
+ {n:"Barrio El Rosal",t:"Barrio",ico:"🏘️",cercano:"IP-01"}
 ];
 
 /* =================== AUTOCOMPLETADO (origen / destino) =================== */
@@ -505,6 +516,10 @@ document.querySelectorAll("[data-layer]").forEach(cb=>cb.onchange=()=>{
   const k=cb.dataset.layer,capa=k==="base"?base:capas[k];
   cb.checked?map.addLayer(capa):map.removeLayer(capa);
 });
+document.getElementById("layersToggle").onclick=()=>{
+  const box=document.getElementById("layers"),abierto=box.classList.toggle("open");
+  document.getElementById("layersToggle").setAttribute("aria-expanded",abierto);
+};
 addEventListener("resize",()=>map.invalidateSize());
 
 /* =================== LEYENDA =================== */
@@ -552,17 +567,65 @@ listaRut.onclick=e=>{const b=e.target.closest("[data-traz]");if(!b)return;
  resaltar([b.dataset.traz]);map.fitBounds(trazos[b.dataset.traz].getBounds(),{padding:[40,40]})};
 
 /* =================== PLANEADOR =================== */
+function tarjetaRuta(id){const r=RUTAS.find(x=>x.id===id);
+ return `<div class="card"><h3><i class="line" style="background:${r.color}"></i><span class="code">${r.id}</span> ${r.nom}</h3><div class="tags"><span class="tag">L-V ${r.hor["L-V"]}</span><span class="tag">Pasaje $2.500</span></div></div>`}
+
+function resolverPunto(texto){
+ const q=normaliza(texto.trim());
+ if(!q)return null;
+ let lugar=LUGARES.find(l=>normaliza(l.n)===q);
+ if(!lugar)lugar=LUGARES.find(l=>normaliza(l.n).includes(q)||q.includes(normaliza(l.n)));
+ if(lugar){
+  const cod=lugar.paradero||lugar.cercano;
+  return{nombre:lugar.n,aproximado:!lugar.paradero&&!!lugar.cercano,paradero:cod?PARADEROS.find(p=>p.c===cod):null};
+ }
+ const p=PARADEROS.find(p=>normaliza(p.n+p.c).includes(q));
+ return p?{nombre:p.n,aproximado:false,paradero:p}:null;
+}
+
+function buscarTransbordo(idsO,idsD){
+ // Busca un paradero donde confluyan una ruta de origen y una de destino distintas entre sí
+ for(const p of PARADEROS){
+  const deO=p.r.filter(r=>idsO.includes(r)),deD=p.r.filter(r=>idsD.includes(r));
+  for(const rA of deO)for(const rB of deD)if(rA!==rB)return{parada:p,rA,rB};
+ }
+ return null;
+}
+
 document.getElementById("buscar").onclick=()=>{
- const o=origen.value.trim().toLowerCase(),d=destino.value.trim().toLowerCase(),out=document.getElementById("resultado");
- if(!o||!d){out.innerHTML=`<p class="lead">Falta un punto. Completa origen y destino para buscar.</p>`;return}
- const co=PARADEROS.filter(s=>(s.n+s.c).toLowerCase().includes(o)),cd=PARADEROS.filter(s=>(s.n+s.c).toLowerCase().includes(d));
- const ids=[...new Set(co.flatMap(s=>s.r).filter(r=>cd.some(s=>s.r.includes(r))))];
- if(!ids.length){out.innerHTML=`<p class="lead">No encontramos una ruta directa entre esos puntos. Intenta con el nombre de un paradero de la lista.</p>`;return}
- resaltar(ids);
- const b=L.latLngBounds(ids.map(i=>trazos[i].getBounds()).reduce((a,c)=>a.extend(c)));
- map.fitBounds(b,{padding:[40,40]});
- out.innerHTML=`<p class="lead">Rutas directas disponibles:</p>`+ids.map(id=>{const r=RUTAS.find(x=>x.id===id);
-  return `<div class="card"><h3><i class="line" style="background:${r.color}"></i><span class="code">${r.id}</span> ${r.nom}</h3><div class="tags"><span class="tag">L-V ${r.hor["L-V"]}</span><span class="tag">Pasaje $2.500</span></div></div>`}).join("")};
+ const out=document.getElementById("resultado");
+ if(!origen.value.trim()||!destino.value.trim()){out.innerHTML=`<p class="lead">Falta un punto. Completa origen y destino para buscar.</p>`;return}
+ const ro=resolverPunto(origen.value),rd=resolverPunto(destino.value);
+ if(!ro||!rd){out.innerHTML=`<p class="lead">No reconocemos uno de los puntos. Elige una opción de la lista o escribe el nombre de un paradero, por ejemplo “Parque Principal” o “Terminal de Transportes”.</p>`;return}
+ if(!ro.paradero||!rd.paradero){
+  const sinServicio=!ro.paradero?ro.nombre:rd.nombre;
+  out.innerHTML=`<p class="lead"><strong>${sinServicio}</strong> no tiene hoy una ruta de DDBUS que llegue directamente. Prueba con un paradero cercano, por ejemplo “Parque Principal”.</p>`;
+  return;
+ }
+ const idsO=ro.paradero.r,idsD=rd.paradero.r;
+ const nota=(ro.aproximado||rd.aproximado)?`<p class="lead" style="margin:0 0 10px">Usamos el paradero más cercano a ${ro.aproximado?ro.nombre:rd.nombre} (aproximado, pendiente de confirmar).</p>`:"";
+ const directas=idsO.filter(r=>idsD.includes(r));
+
+ if(directas.length){
+  resaltar(directas);
+  const b=L.latLngBounds(directas.map(i=>trazos[i].getBounds()).reduce((a,c)=>a.extend(c)));
+  map.fitBounds(b,{padding:[40,40]});
+  out.innerHTML=nota+`<p class="lead">Rutas directas disponibles:</p>`+directas.map(tarjetaRuta).join("");
+  return;
+ }
+
+ const trans=buscarTransbordo(idsO,idsD);
+ if(trans){
+  resaltar([trans.rA,trans.rB]);
+  const b=L.latLngBounds([trazos[trans.rA].getBounds(),trazos[trans.rB].getBounds()].reduce((a,c)=>a.extend(c)));
+  map.fitBounds(b,{padding:[40,40]});
+  out.innerHTML=nota+`<p class="lead">No hay ruta directa, pero puedes hacer transbordo en <strong>${trans.parada.n}</strong>:</p>`
+   +tarjetaRuta(trans.rA)+`<p class="lead" style="margin:6px 0">↓ bájate y toma:</p>`+tarjetaRuta(trans.rB);
+  return;
+ }
+
+ out.innerHTML=nota+`<p class="lead">No encontramos una ruta directa ni con un transbordo entre esos puntos. Intenta con el nombre de un paradero de la lista.</p>`;
+};
 </script>
 </body>
 </html>
