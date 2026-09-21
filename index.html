@@ -154,7 +154,7 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
   <div class="brand">DD<span>BUS</span> Ipiales <small>Transporte urbano municipal</small></div>
   <div class="meta">
     <div class="chip">Pasaje corriente <b>$2.500</b></div>
-    <div class="chip">Estudiante / adulto mayor <b>$1.800</b></div>
+    <div class="chip">Estudiante / adulto mayor <b>$1.500</b></div>
     <div class="chip"><span class="dot"></span> Servicio activo · 5:30 a.m. – 8:30 p.m.</div>
   </div>
 </header>
@@ -253,25 +253,83 @@ h2{font-family:var(--narrow);font-size:20px;margin:0 0 4px}
 <script>
 /* =================== DATOS (reemplazar por los oficiales) =================== */
 const CENTRO=[0.8246,-77.6414], ZOOM=14;
+/* Nombres de ruta tomados de colectivosciudaddeipiales.com/rutas — el sitio publica 12 rutas
+   (no 13) y cada página solo trae una imagen del trazado, sin calles, horarios ni tarifas en
+   texto. hor/coords quedan como PLACEHOLDER ("Por confirmar") hasta reemplazarlos por el dato
+   oficial. */
 const RUTAS=[
- {id:"R1",nom:"Centro – Las Lajas",color:"#3FBFA9",op:true,hor:{"L-V":"5:30 – 8:30 p.m.","SÁB":"6:00 – 8:00 p.m.","DOM":"7:00 – 7:00 p.m."},d:"Parque Principal, carrera 7, vía Las Lajas.",
-  coords:[[0.8268,-77.6449],[0.8255,-77.6408],[0.8231,-77.6356],[0.8190,-77.6250],[0.8143,-77.6104],[0.8094,-77.5963],[0.8052,-77.5861]]},
- {id:"R2",nom:"San Vicente – Terminal",color:"#E8912B",op:true,hor:{"L-V":"5:40 – 8:15 p.m.","SÁB":"6:15 – 7:45 p.m.","DOM":"7:30 – 6:30 p.m."},d:"Barrio San Vicente, calle 14, Terminal de Transportes.",
-  coords:[[0.8398,-77.6382],[0.8347,-77.6402],[0.8300,-77.6431],[0.8268,-77.6449],[0.8241,-77.6470],[0.8210,-77.6489],[0.8185,-77.6462]]},
- {id:"R3",nom:"La Victoria – Hospital",color:"#5B9BE8",op:true,hor:{"L-V":"5:50 – 8:00 p.m.","SÁB":"6:30 – 7:30 p.m.","DOM":"Sin servicio"},d:"La Victoria, avenida Panamericana, Hospital Civil.",
-  coords:[[0.8321,-77.6281],[0.8296,-77.6330],[0.8268,-77.6390],[0.8247,-77.6437],[0.8223,-77.6494],[0.8196,-77.6541]]},
- {id:"R4",nom:"Aeropuerto – Centro",color:"#B77BE0",op:false,hor:{"L-V":"6:10 – 7:20 p.m.","SÁB":"7:00 – 6:00 p.m.","DOM":"Sin servicio"},d:"Aeropuerto San Luis, vía Panamericana, centro histórico.",
-  coords:[[0.8612,-77.6718],[0.8520,-77.6640],[0.8430,-77.6561],[0.8350,-77.6500],[0.8290,-77.6462],[0.8262,-77.6443]]}
+ {id:"R1",nom:"Charco – Tola de Las Lajas",color:"#3FBFA9",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Tola de Las Lajas (sector oriente).",
+  coords:[[0.8268,-77.6449],[0.8231,-77.6356],[0.8143,-77.6104],[0.8052,-77.5861]]},
+
+ {id:"R2",nom:"Charco – San Luis – Cofradía – La Cárcel – Vda. 12 de Octubre",color:"#E8912B",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – San Luis – Cofradía – La Cárcel – Vereda 12 de Octubre.",
+  coords:[[0.8398,-77.6382],[0.8347,-77.6402],[0.8300,-77.6431],[0.8268,-77.6449]]},
+
+ {id:"R3",nom:"Charco – Cementerio",color:"#5B9BE8",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Cementerio.",
+  coords:[[0.8268,-77.6449],[0.8247,-77.6437],[0.8223,-77.6494]]},
+
+ {id:"R4",nom:"Charco – Zuras",color:"#B77BE0",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Zuras.",
+  coords:[[0.8268,-77.6449],[0.8290,-77.6462],[0.8350,-77.6500]]},
+
+ {id:"R5",nom:"Charco – Yapueta",color:"#E05B4C",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Yapueta.",
+  coords:[[0.8268,-77.6449],[0.8296,-77.6330],[0.8321,-77.6281]]},
+
+ {id:"R6",nom:"Charco – San Juan",color:"#4CC38A",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – San Juan.",
+  coords:[[0.8268,-77.6449],[0.8196,-77.6541],[0.8143,-77.6600]]},
+
+ {id:"R7",nom:"Charco – Rumichaca",color:"#E0C23F",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Rumichaca (Puente Internacional).",
+  coords:[[0.8268,-77.6449],[0.8185,-77.6462],[0.8118,-77.6664]]},
+
+ {id:"R8",nom:"Charco – Las Ánimas",color:"#7B8DE0",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Las Ánimas.",
+  coords:[[0.8268,-77.6449],[0.8210,-77.6489],[0.8185,-77.6462]]},
+
+ {id:"R9",nom:"Charco – Estadio Las Américas",color:"#E07BB7",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Estadio Las Américas.",
+  coords:[[0.8268,-77.6449],[0.8224,-77.6402],[0.8200,-77.6370]]},
+
+ {id:"R10",nom:"Charco – Chaguaipe",color:"#3F9BE0",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Charco – Chaguaipe.",
+  coords:[[0.8268,-77.6449],[0.8231,-77.6356],[0.8190,-77.6250]]},
+
+ {id:"R11",nom:"Balcones – La Soledad",color:"#B7E05B",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Balcones – La Soledad.",
+  coords:[[0.8398,-77.6382],[0.8347,-77.6402],[0.8300,-77.6431]]},
+
+ {id:"R12",nom:"Balcones – Camellones",color:"#E0913F",op:true,
+  hor:{"L-V":"Por confirmar","SÁB":"Por confirmar","DOM":"Por confirmar"},
+  d:"Ruta Balcones – Camellones.",
+  coords:[[0.8398,-77.6382],[0.8321,-77.6281],[0.8296,-77.6330]]}
 ];
+/* r: mapeo PROVISIONAL a las 12 rutas reales según cercanía de coordenadas — falta validar
+   contra el trazado oficial de cada ruta. IP-31 (Aeropuerto) no coincide con ninguna de las
+   12 rutas publicadas por la fuente, así que queda sin ruta asignada. */
 const PARADEROS=[
- {c:"IP-01",n:"Parque Principal",s:"Sentido norte",t:true,r:["R1","R2","R4"],ll:[0.8268,-77.6449]},
- {c:"IP-04",n:"Plaza de Mercado",s:"Sentido sur",t:false,r:["R2"],ll:[0.8241,-77.6470]},
- {c:"IP-07",n:"Terminal de Transportes",s:"Ambos sentidos",t:true,r:["R2"],ll:[0.8185,-77.6462]},
- {c:"IP-12",n:"Hospital Civil",s:"Sentido occidente",t:true,r:["R3"],ll:[0.8196,-77.6541]},
- {c:"IP-18",n:"Av. Panamericana – Colegio",s:"Sentido oriente",t:false,r:["R3"],ll:[0.8296,-77.6330]},
+ {c:"IP-01",n:"Parque Principal (Charco)",s:"Sentido norte",t:true,r:["R1","R2","R3","R4","R5","R6","R7","R8","R9","R10"],ll:[0.8268,-77.6449]},
+ {c:"IP-04",n:"Plaza de Mercado",s:"Sentido sur",t:false,r:["R4"],ll:[0.8241,-77.6470]},
+ {c:"IP-07",n:"Terminal de Transportes",s:"Ambos sentidos",t:true,r:["R7","R8"],ll:[0.8185,-77.6462]},
+ {c:"IP-12",n:"Hospital Civil",s:"Sentido occidente",t:true,r:["R6"],ll:[0.8196,-77.6541]},
+ {c:"IP-18",n:"Av. Panamericana – Colegio",s:"Sentido oriente",t:false,r:["R5","R12"],ll:[0.8296,-77.6330]},
  {c:"IP-23",n:"Santuario de Las Lajas",s:"Ambos sentidos",t:true,r:["R1"],ll:[0.8052,-77.5861]},
- {c:"IP-27",n:"Barrio San Vicente",s:"Sentido norte",t:false,r:["R2"],ll:[0.8398,-77.6382]},
- {c:"IP-31",n:"Aeropuerto San Luis",s:"Sentido oriente",t:true,r:["R4"],ll:[0.8612,-77.6718]}
+ {c:"IP-27",n:"Barrio San Vicente (Balcones)",s:"Sentido norte",t:false,r:["R2","R11","R12"],ll:[0.8398,-77.6382]},
+ {c:"IP-31",n:"Aeropuerto San Luis",s:"Sentido oriente",t:true,r:[],ll:[0.8612,-77.6718]}
 ];
 const REFS=[
  {n:"Catedral de Ipiales",ll:[0.8272,-77.6443]},{n:"Alcaldía Municipal",ll:[0.8262,-77.6455]},
@@ -281,10 +339,10 @@ const REFS=[
 /* ---- Buses activos (mock) ---- */
 /* pos: fracción 0–1 recorrida sobre RUTAS[ruta].coords · vel: fracción/seg (simulada) */
 const BUSES=[
- {id:"BUS-104",ruta:"R1",origen:"Terminal de Transportes",destino:"Santuario de Las Lajas",pos:.18,vel:.006,eta:9},
- {id:"BUS-212",ruta:"R2",origen:"Barrio San Vicente",destino:"Terminal de Transportes",pos:.62,vel:.008,eta:4},
- {id:"BUS-087",ruta:"R3",origen:"La Victoria",destino:"Hospital Civil",pos:.35,vel:.007,eta:6},
- {id:"BUS-301",ruta:"R2",origen:"Terminal de Transportes",destino:"Barrio San Vicente",pos:.85,vel:.005,eta:2}
+ {id:"BUS-104",ruta:"R1",origen:"Charco",destino:"Tola de Las Lajas",pos:.18,vel:.006,eta:9},
+ {id:"BUS-212",ruta:"R2",origen:"Barrio San Vicente",destino:"Vereda 12 de Octubre",pos:.62,vel:.008,eta:4},
+ {id:"BUS-087",ruta:"R3",origen:"Charco",destino:"Cementerio",pos:.35,vel:.007,eta:6},
+ {id:"BUS-301",ruta:"R7",origen:"Terminal de Transportes",destino:"Rumichaca",pos:.85,vel:.005,eta:2}
 ];
 
 
